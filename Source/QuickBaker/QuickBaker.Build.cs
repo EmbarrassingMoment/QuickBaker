@@ -38,6 +38,11 @@ public class QuickBaker : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"InputCore",
+				"EditorStyle",
+				"ToolMenus",
+				"UnrealEd",
+				"Projects",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
