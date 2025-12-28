@@ -1,0 +1,19 @@
+# コンパイル済みバイナリと中間ファイル
+Binaries/
+Intermediate/
+
+# ユーザーごとの設定ファイル（もしあれば）
+Saved/
+
+# IDE関連のファイル
+.vs/
+*.sln
+*.vcxproj
+*.opensdf
+*.sdf
+*.suo
+*.user
+*.idea/
+
+# Mac用
+.DS_Store
