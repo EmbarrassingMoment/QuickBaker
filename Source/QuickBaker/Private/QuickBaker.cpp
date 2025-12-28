@@ -22,6 +22,9 @@
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/EditorEngine.h"
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
+#include "HAL/FileManager.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -283,10 +286,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					[
 						SNew(SButton)
 						.Text(LOCTEXT("Browse", "Browse"))
-						.OnClicked_Lambda([]() {
-							// Placeholder for browse functionality
-							return FReply::Handled();
-						})
+						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseClicked)
 					]
 				]
 			]
@@ -408,6 +408,25 @@ void FQuickBakerModule::OnOutputNameChanged(const FText& NewText)
 	OutputName = NewText;
 }
 
+FReply FQuickBakerModule::OnBrowseClicked()
+{
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	FSaveAssetDialogConfig SaveAssetDialogConfig;
+	SaveAssetDialogConfig.DialogTitleOverride = LOCTEXT("SaveAssetDialogTitle", "Choose Output Path");
+	SaveAssetDialogConfig.DefaultPath = OutputPath;
+	SaveAssetDialogConfig.DefaultAssetName = OutputName.ToString();
+	SaveAssetDialogConfig.ExistingAssetPolicy = ESaveAssetDialogExistingAssetPolicy::AllowButWarn;
+
+	FString SaveObjectPath = ContentBrowserModule.Get().CreateSaveAssetDialog(SaveAssetDialogConfig);
+	if (!SaveObjectPath.IsEmpty())
+	{
+		FString PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
+		OutputPath = FPackageName::GetLongPackagePath(PackageName);
+		OutputName = FText::FromString(FPackageName::GetShortName(PackageName));
+	}
+	return FReply::Handled();
+}
+
 FReply FQuickBakerModule::OnBakeClicked()
 {
 	ExecuteBake();
@@ -432,12 +451,42 @@ void FQuickBakerModule::ExecuteBake()
 	const int32 Resolution = *SelectedResolution;
 	const bool bIs16Bit = *SelectedBitDepth == "16-bit";
 	const FString Name = OutputName.ToString();
-	const FString PackagePath = OutputPath;
+	FString PackagePath = OutputPath;
 
 	if (Name.IsEmpty())
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoName", "Please specify an output name."));
 		return;
+	}
+
+	// Fix UX: Ensure path starts with /Game/
+	if (!PackagePath.StartsWith(TEXT("/Game/")))
+	{
+		if (PackagePath.StartsWith(TEXT("Game/")))
+		{
+			PackagePath = TEXT("/") + PackagePath;
+		}
+		else
+		{
+			PackagePath = FPaths::Combine(TEXT("/Game"), PackagePath);
+		}
+	}
+
+	// Remove trailing slash
+	if (PackagePath.EndsWith(TEXT("/")))
+	{
+		PackagePath.RemoveAt(PackagePath.Len() - 1);
+	}
+
+	// Auto-create folder
+	FString FilesystemPath = FPackageName::LongPackageNameToFilename(PackagePath);
+	if (!IFileManager::Get().DirectoryExists(*FilesystemPath))
+	{
+		if (!IFileManager::Get().MakeDirectory(*FilesystemPath, true))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_CreateDir", "Failed to create output directory: {0}"), FText::FromString(FilesystemPath)));
+			return;
+		}
 	}
 
 	FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
