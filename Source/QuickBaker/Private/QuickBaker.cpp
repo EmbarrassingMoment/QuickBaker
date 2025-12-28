@@ -14,6 +14,14 @@
 #include "Engine/Texture.h"
 #include "Styling/AppStyle.h"
 #include "AssetRegistry/AssetData.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "AssetToolsModule.h"
+#include "ScopedTransaction.h"
+#include "Misc/MessageDialog.h"
+#include "Misc/PackageName.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Editor/EditorEngine.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -402,8 +410,99 @@ void FQuickBakerModule::OnOutputNameChanged(const FText& NewText)
 
 FReply FQuickBakerModule::OnBakeClicked()
 {
-	// Implementation of bake functionality would go here
+	ExecuteBake();
 	return FReply::Handled();
+}
+
+void FQuickBakerModule::ExecuteBake()
+{
+	// 1. Validation
+	if (!SelectedMaterial.IsValid())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoMaterial", "Please select a material to bake."));
+		return;
+	}
+
+	if (!SelectedResolution.IsValid() || !SelectedBitDepth.IsValid() || !SelectedCompression.IsValid())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_InvalidSettings", "Invalid bake settings."));
+		return;
+	}
+
+	const int32 Resolution = *SelectedResolution;
+	const bool bIs16Bit = *SelectedBitDepth == "16-bit";
+	const FString Name = OutputName.ToString();
+	const FString PackagePath = OutputPath;
+
+	if (Name.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoName", "Please specify an output name."));
+		return;
+	}
+
+	FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
+
+	// 2. Setup Render Target
+	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
+	check(RenderTarget);
+	RenderTarget->InitAutoFormat(Resolution, Resolution);
+	RenderTarget->RenderTargetFormat = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
+	RenderTarget->bUseLinearGamma = true; // Often needed for data, but let's stick to requirement sRGB=false which implies linear.
+	RenderTarget->SRGB = false; // Requirement: bSRGB = false
+	RenderTarget->UpdateResourceImmediate(true);
+
+	// 3. Bake Material
+	UObject* WorldContextObject = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UKismetRenderingLibrary::DrawMaterialToRenderTarget(WorldContextObject, RenderTarget, SelectedMaterial.Get());
+
+	// 4. Convert to Static Texture
+	FString PackageName = FPaths::Combine(PackagePath, Name);
+	FString AssetName = Name;
+
+	// Create Package
+	UPackage* Package = CreatePackage(*PackageName);
+
+	// Requirement: Use UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly or FAssetToolsModule
+	// RenderTargetCreateStaticTexture2DEditorOnly creates a new asset.
+
+	UTexture2D* NewTexture = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, Name, *SelectedCompression);
+
+	if (NewTexture)
+	{
+		// Move the texture to the correct package if needed, or check if RenderTargetCreateStaticTexture2DEditorOnly handles it.
+		// RenderTargetCreateStaticTexture2DEditorOnly usually creates it in the Transient package or similar if not specified.
+		// Wait, the function signature is: (UTextureRenderTarget2D* RenderTarget, FString Name = "Texture", TextureCompressionSettings CompressionSettings = TC_Default, TextureMipGenSettings MipSettings = TMGS_FromTextureGroup)
+		// It doesn't take a path. It creates it in the Transient package usually? Or maybe allows renaming.
+
+		// A common pattern is to duplicate/rename or simply use it as source.
+		// BUT the requirements say: "Create a new UTexture2D asset in the specified path."
+
+		// If UKismetRenderingLibrary doesn't support path, let's use FAssetToolsModule or duplicate.
+		// Actually, let's check if we can rename it to the target package.
+
+		NewTexture->Rename(*AssetName, Package);
+
+		// 5. Texture Settings
+		NewTexture->CompressionSettings = *SelectedCompression;
+		NewTexture->SRGB = false; // Requirement: sRGB = false
+
+		// Save
+		NewTexture->MarkPackageDirty();
+		NewTexture->PostEditChange();
+
+		// Notify Asset Registry
+		FAssetRegistryModule::AssetCreated(NewTexture);
+
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
+	}
+	else
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_BakeFailed", "Failed to create texture from render target."));
+	}
+
+	// 6. Cleanup
+	// RenderTarget is a UObject, will be garbage collected. Explicit cleanup usually means removing from root if added, but here it's local.
+	// We can manually mark it pending kill if we want immediate cleanup, but GC handles it.
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -43,6 +43,9 @@ public class QuickBaker : ModuleRules
 				"ToolMenus",
 				"PropertyEditor",
 				"EditorStyle",
+				"UnrealEd",
+				"AssetTools",
+				"AssetRegistry",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
