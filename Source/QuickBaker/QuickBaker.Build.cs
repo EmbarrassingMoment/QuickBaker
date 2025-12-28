@@ -46,6 +46,7 @@ public class QuickBaker : ModuleRules
 				"UnrealEd",
 				"AssetTools",
 				"AssetRegistry",
+				"ContentBrowser",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

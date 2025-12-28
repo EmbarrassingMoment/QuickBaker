@@ -22,6 +22,9 @@
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/EditorEngine.h"
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
+#include "HAL/PlatformFilemanager.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -283,10 +286,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					[
 						SNew(SButton)
 						.Text(LOCTEXT("Browse", "Browse"))
-						.OnClicked_Lambda([]() {
-							// Placeholder for browse functionality
-							return FReply::Handled();
-						})
+						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseClicked)
 					]
 				]
 			]
@@ -408,6 +408,27 @@ void FQuickBakerModule::OnOutputNameChanged(const FText& NewText)
 	OutputName = NewText;
 }
 
+FReply FQuickBakerModule::OnBrowseClicked()
+{
+	FSaveAssetDialogConfig SaveAssetDialogConfig;
+	SaveAssetDialogConfig.DialogTitleOverride = LOCTEXT("SaveTextureDialogTitle", "Save Texture As");
+	SaveAssetDialogConfig.DefaultPath = OutputPath;
+	SaveAssetDialogConfig.DefaultAssetName = OutputName.ToString();
+	SaveAssetDialogConfig.ExistingAssetPolicy = ESaveAssetDialogExistingAssetPolicy::AllowButWarn;
+
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	FString SaveObjectPath = ContentBrowserModule.Get().CreateSaveAssetDialog(SaveAssetDialogConfig);
+
+	if (!SaveObjectPath.IsEmpty())
+	{
+		FString PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
+		OutputPath = FPackageName::GetLongPackagePath(PackageName);
+		OutputName = FText::FromString(FPackageName::GetShortName(PackageName));
+	}
+
+	return FReply::Handled();
+}
+
 FReply FQuickBakerModule::OnBakeClicked()
 {
 	ExecuteBake();
@@ -432,7 +453,64 @@ void FQuickBakerModule::ExecuteBake()
 	const int32 Resolution = *SelectedResolution;
 	const bool bIs16Bit = *SelectedBitDepth == "16-bit";
 	const FString Name = OutputName.ToString();
-	const FString PackagePath = OutputPath;
+	FString PackagePath = OutputPath;
+
+	// Ensure the OutputPath string is properly formatted (starts with /Game/, no trailing slash issues).
+	if (!PackagePath.StartsWith(TEXT("/Game")))
+	{
+		// Attempt to fix: If it starts with Game/, fix to /Game/
+		if (PackagePath.StartsWith(TEXT("Game/")))
+		{
+			PackagePath = TEXT("/") + PackagePath;
+		}
+		// If it's just a folder name, assume /Game/
+		else if (!PackagePath.StartsWith(TEXT("/")))
+		{
+			PackagePath = TEXT("/Game/") + PackagePath;
+		}
+		else
+		{
+			// Starts with /, but not /Game. Maybe /Engine or /Plugin?
+			// If it starts with /Content, map to /Game
+			if (PackagePath.StartsWith(TEXT("/Content")))
+			{
+				PackagePath = TEXT("/Game") + PackagePath.RightChop(8);
+			}
+		}
+	}
+
+	// Remove trailing slash
+	while (PackagePath.EndsWith(TEXT("/")) || PackagePath.EndsWith(TEXT("\\")))
+	{
+		PackagePath.RemoveAt(PackagePath.Len() - 1);
+	}
+
+	// Update OutputPath to match normalized path
+	OutputPath = PackagePath;
+
+	// Check if directory exists and create it if not
+	FString FullPackageName = FPaths::Combine(PackagePath, Name);
+	FString AssetFilename = FPackageName::LongPackageNameToFilename(FullPackageName);
+	FString FilesystemPath = FPaths::GetPath(AssetFilename);
+
+	if (FilesystemPath.IsEmpty())
+	{
+		// Fallback for /Game/...
+		if (PackagePath.StartsWith(TEXT("/Game/")))
+		{
+			FilesystemPath = FPaths::ProjectContentDir() + PackagePath.RightChop(6);
+		}
+	}
+
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	if (!PlatformFile.DirectoryExists(*FilesystemPath))
+	{
+		if (!PlatformFile.CreateDirectoryTree(*FilesystemPath))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_CreateFolder", "Failed to create output directory: {0}"), FText::FromString(FilesystemPath)));
+			return;
+		}
+	}
 
 	if (Name.IsEmpty())
 	{
