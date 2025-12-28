@@ -38,6 +38,9 @@ public class QuickBaker : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"InputCore",
+				"Projects",
+				"ToolMenus",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
