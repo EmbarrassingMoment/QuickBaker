@@ -26,6 +26,17 @@ public class QuickBaker : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
+				"Engine",
+				"InputCore",
+				"UnrealEd",
+				"Slate",
+				"SlateCore",
+				"ToolMenus",
+				"AssetTools",
+				"AssetRegistry",
+				"RenderCore",
+				"RHI",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -34,10 +45,17 @@ public class QuickBaker : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"Projects",
+				"InputCore",
+				"EditorFramework",
+				"UnrealEd",
+				"ToolMenus",
 				"CoreUObject",
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"PropertyEditor",
+				"ContentBrowser",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
