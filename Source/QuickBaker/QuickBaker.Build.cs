@@ -43,6 +43,7 @@ public class QuickBaker : ModuleRules
 				"ToolMenus",
 				"PropertyEditor",
 				"EditorStyle",
+				"ContentBrowser",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

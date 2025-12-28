@@ -14,6 +14,10 @@
 #include "Engine/Texture.h"
 #include "Styling/AppStyle.h"
 #include "AssetRegistry/AssetData.h"
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Interfaces/IMainFrameModule.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -275,10 +279,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					[
 						SNew(SButton)
 						.Text(LOCTEXT("Browse", "Browse"))
-						.OnClicked_Lambda([]() {
-							// Placeholder for browse functionality
-							return FReply::Handled();
-						})
+						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseOutputDirectory)
 					]
 				]
 			]
@@ -404,6 +405,68 @@ FReply FQuickBakerModule::OnBakeClicked()
 {
 	// Implementation of bake functionality would go here
 	return FReply::Handled();
+}
+
+FReply FQuickBakerModule::OnBrowseOutputDirectory()
+{
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+
+	FPathPickerConfig PathPickerConfig;
+	PathPickerConfig.bAllowContextMenu = false;
+	PathPickerConfig.bFocusSearchBoxWhenOpened = true;
+	PathPickerConfig.DefaultPath = OutputPath;
+	PathPickerConfig.OnPathSelected = FOnPathSelected::CreateRaw(this, &FQuickBakerModule::OnPathSelected);
+
+	TSharedRef<SWidget> PathPickerWidget = ContentBrowserModule.Get().CreatePathPicker(PathPickerConfig);
+
+	TSharedRef<SWindow> NewPickerWindow = SNew(SWindow)
+		.Title(LOCTEXT("SelectOutputPath", "Select Output Path"))
+		.ClientSize(FVector2D(400, 400))
+		.SupportsMaximize(false)
+		.SupportsMinimize(false);
+
+	NewPickerWindow->SetContent(
+		SNew(SVerticalBox)
+		+ SVerticalBox::Slot()
+		.FillHeight(1.0f)
+		[
+			PathPickerWidget
+		]
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.HAlign(HAlign_Right)
+		.Padding(10)
+		[
+			SNew(SButton)
+			.Text(LOCTEXT("Select", "Select"))
+			.OnClicked_Lambda([this, NewPickerWindow]()
+			{
+				NewPickerWindow->RequestDestroyWindow();
+				return FReply::Handled();
+			})
+		]
+	);
+
+	PickerWindow = NewPickerWindow;
+
+	IMainFrameModule& MainFrame = FModuleManager::LoadModuleChecked<IMainFrameModule>("MainFrame");
+	TSharedPtr<SWindow> ParentWindow = MainFrame.GetParentWindow();
+
+	if (ParentWindow.IsValid())
+	{
+		FSlateApplication::Get().AddModalWindow(NewPickerWindow, ParentWindow, false);
+	}
+	else
+	{
+		FSlateApplication::Get().AddWindow(NewPickerWindow);
+	}
+
+	return FReply::Handled();
+}
+
+void FQuickBakerModule::OnPathSelected(const FString& NewPath)
+{
+	OutputPath = NewPath;
 }
 
 #undef LOCTEXT_NAMESPACE

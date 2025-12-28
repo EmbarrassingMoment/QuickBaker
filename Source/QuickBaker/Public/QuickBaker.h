@@ -59,4 +59,8 @@ private:
 	void OnOutputNameChanged(const FText& NewText);
 
 	FReply OnBakeClicked();
+	FReply OnBrowseOutputDirectory();
+	void OnPathSelected(const FString& NewPath);
+
+	TWeakPtr<class SWindow> PickerWindow;
 };
