@@ -135,8 +135,8 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				[
 					SNew(SObjectPropertyEntryBox)
 					.AllowedClass(UMaterialInterface::StaticClass())
-					.ObjectPath(this, &FQuickBakerModule::GetSelectedMaterialPath)
-					.OnObjectChanged(this, &FQuickBakerModule::OnMaterialChanged)
+					.ObjectPath_Raw(this, &FQuickBakerModule::GetSelectedMaterialPath)
+					.OnObjectChanged_Raw(this, &FQuickBakerModule::OnMaterialChanged)
 					.AllowClear(true)
 					.DisplayUseSelected(true)
 					.DisplayBrowse(true)
@@ -162,10 +162,10 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					SNew(SComboBox<TSharedPtr<int32>>)
 					.OptionsSource(&ResolutionOptions)
 					.InitiallySelectedItem(SelectedResolution)
-					.OnGenerateWidget(this, &FQuickBakerModule::GenerateResolutionWidget)
-					.OnSelectionChanged(this, &FQuickBakerModule::OnResolutionChanged)
+					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateResolutionWidget)
+					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnResolutionChanged)
 					[
-						SNew(STextBlock).Text(this, &FQuickBakerModule::GetSelectedResolutionText)
+						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedResolutionText)
 					]
 				]
 			]
@@ -189,10 +189,10 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					SNew(SComboBox<TSharedPtr<FString>>)
 					.OptionsSource(&BitDepthOptions)
 					.InitiallySelectedItem(SelectedBitDepth)
-					.OnGenerateWidget(this, &FQuickBakerModule::GenerateBitDepthWidget)
-					.OnSelectionChanged(this, &FQuickBakerModule::OnBitDepthChanged)
+					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateBitDepthWidget)
+					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnBitDepthChanged)
 					[
-						SNew(STextBlock).Text(this, &FQuickBakerModule::GetSelectedBitDepthText)
+						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedBitDepthText)
 					]
 				]
 			]
@@ -216,10 +216,10 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					SNew(SComboBox<TSharedPtr<TextureCompressionSettings>>)
 					.OptionsSource(&CompressionOptions)
 					.InitiallySelectedItem(SelectedCompression)
-					.OnGenerateWidget(this, &FQuickBakerModule::GenerateCompressionWidget)
-					.OnSelectionChanged(this, &FQuickBakerModule::OnCompressionChanged)
+					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateCompressionWidget)
+					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnCompressionChanged)
 					[
-						SNew(STextBlock).Text(this, &FQuickBakerModule::GetSelectedCompressionText)
+						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedCompressionText)
 					]
 				]
 			]
@@ -242,7 +242,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				[
 					SNew(SEditableTextBox)
 					.Text_Lambda([this] { return OutputName; })
-					.OnTextChanged(this, &FQuickBakerModule::OnOutputNameChanged)
+					.OnTextChanged_Raw(this, &FQuickBakerModule::OnOutputNameChanged)
 				]
 			]
 
@@ -292,7 +292,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.ContentPadding(FMargin(10, 5))
 				.HAlign(HAlign_Center)
 				.Text(LOCTEXT("BakeTexture", "Bake Texture"))
-				.OnClicked(this, &FQuickBakerModule::OnBakeClicked)
+				.OnClicked_Raw(this, &FQuickBakerModule::OnBakeClicked)
 			]
 		];
 }
