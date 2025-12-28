@@ -47,12 +47,14 @@ void FQuickBakerModule::RegisterMenus()
 	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
 	{
 		FToolMenuSection& Section = Menu->FindOrAddSection("QuickBakerSection");
-		Section.AddMenuEntryWithCommandList(
-			FUIAction(FExecuteAction::CreateRaw(this, &FQuickBakerModule::PluginButtonClicked)),
-			TSharedPtr<FUICommandList>(),
-			LOCTEXT("QuickBaker", "Quick Baker"),
-			LOCTEXT("QuickBakerTooltip", "Open the Quick Baker Window"),
-			FSlateIcon()
+		Section.AddMenuEntry(
+			FToolMenuEntry::InitMenuEntry(
+				"QuickBaker",
+				LOCTEXT("QuickBaker", "Quick Baker"),
+				LOCTEXT("QuickBakerTooltip", "Open the Quick Baker Window"),
+				FSlateIcon(),
+				FUIAction(FExecuteAction::CreateRaw(this, &FQuickBakerModule::PluginButtonClicked))
+			)
 		);
 	}
 }
