@@ -447,7 +447,7 @@ void FQuickBakerModule::ExecuteBake()
 	check(RenderTarget);
 	RenderTarget->InitAutoFormat(Resolution, Resolution);
 	RenderTarget->RenderTargetFormat = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
-	RenderTarget->bUseLinearGamma = true; // Often needed for data, but let's stick to requirement sRGB=false which implies linear.
+	RenderTarget->bForceLinearGamma = true; // Often needed for data, but let's stick to requirement sRGB=false which implies linear.
 	RenderTarget->SRGB = false; // Requirement: bSRGB = false
 	RenderTarget->UpdateResourceImmediate(true);
 
