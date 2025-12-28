@@ -41,6 +41,8 @@ public class QuickBaker : ModuleRules
 				"InputCore",
 				"Projects",
 				"ToolMenus",
+				"PropertyEditor",
+				"EditorStyle",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
