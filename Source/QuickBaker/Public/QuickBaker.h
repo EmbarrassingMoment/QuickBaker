@@ -5,6 +5,9 @@
 #include "Modules/ModuleManager.h"
 #include "Engine/Texture.h"
 
+class FAssetThumbnailPool;
+class FAssetThumbnail;
+
 class FQuickBakerModule : public IModuleInterface
 {
 public:
@@ -36,6 +39,9 @@ private:
 	TWeakObjectPtr<class UMaterialInterface> SelectedMaterial;
 	FText OutputName;
 	FString OutputPath;
+
+	TSharedPtr<class FAssetThumbnailPool> ThumbnailPool;
+	TSharedPtr<class FAssetThumbnail> MaterialThumbnail;
 
 	// Helper to initialize options
 	void InitializeOptions();
