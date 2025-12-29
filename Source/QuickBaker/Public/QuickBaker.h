@@ -40,6 +40,10 @@ private:
 	// Helper to initialize options
 	void InitializeOptions();
 
+	// Thumbnail Support
+	TSharedPtr<class FAssetThumbnailPool> ThumbnailPool;
+	TSharedPtr<class FAssetThumbnail> MaterialThumbnail;
+
 	// UI Callbacks
 	void OnMaterialChanged(const struct FAssetData& AssetData);
 	FString GetSelectedMaterialPath() const;

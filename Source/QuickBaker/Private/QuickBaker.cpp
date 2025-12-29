@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "QuickBaker.h"
+#include "AssetThumbnail.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Layout/SBox.h"
@@ -41,6 +42,8 @@ void FQuickBakerModule::StartupModule()
 		.SetMenuType(ETabSpawnerMenuType::Hidden);
 
 	UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FQuickBakerModule::RegisterMenus));
+
+	ThumbnailPool = MakeShareable(new FAssetThumbnailPool(24));
 }
 
 void FQuickBakerModule::ShutdownModule()
@@ -53,6 +56,8 @@ void FQuickBakerModule::ShutdownModule()
 	UToolMenus::UnregisterOwner(this);
 
 	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(QuickBakerTabName);
+
+	ThumbnailPool.Reset();
 }
 
 void FQuickBakerModule::PluginButtonClicked()
@@ -123,6 +128,8 @@ void FQuickBakerModule::InitializeOptions()
 
 TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
+	MaterialThumbnail = MakeShareable(new FAssetThumbnail(SelectedMaterial.Get(), 64, 64, ThumbnailPool));
+
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
@@ -151,6 +158,12 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.AllowClear(true)
 					.DisplayUseSelected(true)
 					.DisplayBrowse(true)
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.Padding(10, 0, 0, 0)
+				[
+					MaterialThumbnail->MakeThumbnailWidget()
 				]
 			]
 
@@ -308,6 +321,11 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 void FQuickBakerModule::OnMaterialChanged(const FAssetData& AssetData)
 {
 	SelectedMaterial = Cast<UMaterialInterface>(AssetData.GetAsset());
+	if (MaterialThumbnail.IsValid())
+	{
+		MaterialThumbnail->SetAsset(AssetData);
+	}
+
 	if (SelectedMaterial.IsValid())
 	{
 		FString Name = SelectedMaterial->GetName();
