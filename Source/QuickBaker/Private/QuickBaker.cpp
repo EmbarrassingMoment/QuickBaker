@@ -149,35 +149,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 		.TabRole(ETabRole::NomadTab)
 		[
 			SNew(SVerticalBox)
-			// 1. Output Type
-			+ SVerticalBox::Slot()
-			.AutoHeight()
-			.Padding(5)
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot()
-				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(0, 0, 10, 0)
-				[
-					SNew(STextBlock).Text(LOCTEXT("Label_OutputType", "Output Type"))
-				]
-				+ SHorizontalBox::Slot()
-				.FillWidth(1.0f)
-				[
-					SNew(SComboBox<TSharedPtr<EQuickBakerOutputType>>)
-					.ToolTipText(LOCTEXT("Tooltip_OutputType", "Select the output format: Asset, PNG, or EXR."))
-					.OptionsSource(&OutputTypeOptions)
-					.InitiallySelectedItem(SelectedOutputType)
-					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateOutputTypeWidget)
-					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnOutputTypeChanged)
-					[
-						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedOutputTypeText)
-					]
-				]
-			]
-
-			// 2. Material Selection
+			// 1. Material Selection
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -214,6 +186,34 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.HeightOverride(64)
 					[
 						(MaterialThumbnail = MakeShareable(new FAssetThumbnail(SelectedMaterial.Get(), 64, 64, ThumbnailPool)))->MakeThumbnailWidget()
+					]
+				]
+			]
+
+			// 2. Output Type
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(5)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(0, 0, 10, 0)
+				[
+					SNew(STextBlock).Text(LOCTEXT("Label_OutputType", "Output Type"))
+				]
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				[
+					SNew(SComboBox<TSharedPtr<EQuickBakerOutputType>>)
+					.ToolTipText(LOCTEXT("Tooltip_OutputType", "Select the output format: Asset, PNG, or EXR."))
+					.OptionsSource(&OutputTypeOptions)
+					.InitiallySelectedItem(SelectedOutputType)
+					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateOutputTypeWidget)
+					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnOutputTypeChanged)
+					[
+						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedOutputTypeText)
 					]
 				]
 			]
