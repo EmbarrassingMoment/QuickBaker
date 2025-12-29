@@ -263,6 +263,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SComboBox<TSharedPtr<FString>>)
+					.IsEnabled_Lambda([this]() { return SelectedOutputType.IsValid() && *SelectedOutputType == EQuickBakerOutputType::Asset; })
 					.ToolTipText(LOCTEXT("Tooltip_BitDepth", "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."))
 					.OptionsSource(&BitDepthOptions)
 					.InitiallySelectedItem(SelectedBitDepth)
@@ -389,6 +390,29 @@ void FQuickBakerModule::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 		else
 		{
 			OutputPath = FPaths::ProjectSavedDir();
+		}
+
+		if (*SelectedOutputType == EQuickBakerOutputType::PNG)
+		{
+			for (const auto& Option : BitDepthOptions)
+			{
+				if (*Option == TEXT("8-bit"))
+				{
+					SelectedBitDepth = Option;
+					break;
+				}
+			}
+		}
+		else if (*SelectedOutputType == EQuickBakerOutputType::EXR)
+		{
+			for (const auto& Option : BitDepthOptions)
+			{
+				if (*Option == TEXT("16-bit"))
+				{
+					SelectedBitDepth = Option;
+					break;
+				}
+			}
 		}
 	}
 }
