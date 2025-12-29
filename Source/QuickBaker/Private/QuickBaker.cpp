@@ -638,6 +638,7 @@ void FQuickBakerModule::ExecuteBake()
 
 	// 3. Bake Material
 	UObject* WorldContextObject = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UKismetRenderingLibrary::ClearRenderTarget2D(WorldContextObject, RenderTarget, FLinearColor::Black);
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(WorldContextObject, RenderTarget, SelectedMaterial.Get());
 
 	if (bIsAsset)
@@ -718,6 +719,12 @@ void FQuickBakerModule::ExecuteBake()
 				// PNG Export (8-bit)
 				TArray<FColor> Bitmap;
 				RTResource->ReadPixels(Bitmap, ReadPixelFlags);
+
+				// Force Alpha to 255 (Opaque)
+				for (FColor& Pixel : Bitmap)
+				{
+					Pixel.A = 255;
+				}
 
 				TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 				if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), Resolution, Resolution, ERGBFormat::BGRA, 8))
