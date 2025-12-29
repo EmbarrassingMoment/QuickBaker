@@ -22,6 +22,9 @@
 #include "Misc/PackageName.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor/EditorEngine.h"
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
+#include "HAL/FileManager.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -283,10 +286,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					[
 						SNew(SButton)
 						.Text(LOCTEXT("Browse", "Browse"))
-						.OnClicked_Lambda([]() {
-							// Placeholder for browse functionality
-							return FReply::Handled();
-						})
+						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseClicked)
 					]
 				]
 			]
@@ -414,6 +414,27 @@ FReply FQuickBakerModule::OnBakeClicked()
 	return FReply::Handled();
 }
 
+FReply FQuickBakerModule::OnBrowseClicked()
+{
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	FSaveAssetDialogConfig SaveAssetDialogConfig;
+	SaveAssetDialogConfig.DefaultPath = OutputPath;
+	SaveAssetDialogConfig.DefaultAssetName = OutputName.ToString();
+	SaveAssetDialogConfig.AssetClassNames.Add(UTexture2D::StaticClass()->GetClassPathName());
+	SaveAssetDialogConfig.ExistingAssetPolicy = ESaveAssetDialogExistingAssetPolicy::AllowButWarn;
+	SaveAssetDialogConfig.DialogTitleOverride = LOCTEXT("SaveTextureDialog", "Save Texture");
+
+	FString SaveObjectPath = ContentBrowserModule.Get().CreateModalSaveAssetDialog(SaveAssetDialogConfig);
+	if (!SaveObjectPath.IsEmpty())
+	{
+		FString PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
+		OutputPath = FPackageName::GetLongPackagePath(PackageName);
+		OutputName = FText::FromString(FPackageName::GetShortName(PackageName));
+	}
+
+	return FReply::Handled();
+}
+
 void FQuickBakerModule::ExecuteBake()
 {
 	// 1. Validation
@@ -432,12 +453,37 @@ void FQuickBakerModule::ExecuteBake()
 	const int32 Resolution = *SelectedResolution;
 	const bool bIs16Bit = *SelectedBitDepth == "16-bit";
 	const FString Name = OutputName.ToString();
-	const FString PackagePath = OutputPath;
+	FString PackagePath = OutputPath;
+
+	if (!PackagePath.StartsWith(TEXT("/Game/")))
+	{
+		PackagePath = TEXT("/Game/") + PackagePath;
+	}
+	while (PackagePath.EndsWith(TEXT("/")) && PackagePath.Len() > 1)
+	{
+		PackagePath.LeftChopInline(1);
+	}
 
 	if (Name.IsEmpty())
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoName", "Please specify an output name."));
 		return;
+	}
+
+	// Ensure directory exists
+	FString FullPackageName = FPaths::Combine(PackagePath, Name);
+	FString AssetPackageFilename;
+	if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, AssetPackageFilename))
+	{
+		FString PackageDirectory = FPaths::GetPath(AssetPackageFilename);
+		if (!IFileManager::Get().DirectoryExists(*PackageDirectory))
+		{
+			if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
+			{
+				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_MakeDirectory", "Failed to create output directory."));
+				return;
+			}
+		}
 	}
 
 	FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
@@ -456,7 +502,7 @@ void FQuickBakerModule::ExecuteBake()
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(WorldContextObject, RenderTarget, SelectedMaterial.Get());
 
 	// 4. Convert to Static Texture
-	FString PackageName = FPaths::Combine(PackagePath, Name);
+	FString PackageName = FullPackageName;
 	FString AssetName = Name;
 
 	// Create Package

@@ -59,6 +59,7 @@ private:
 	void OnOutputNameChanged(const FText& NewText);
 
 	FReply OnBakeClicked();
+	FReply OnBrowseClicked();
 
 	// Core baking logic
 	void ExecuteBake();
