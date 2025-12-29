@@ -53,7 +53,6 @@ void FQuickBakerModule::ShutdownModule()
 
 	if (ThumbnailPool.IsValid())
 	{
-		ThumbnailPool->ReleaseResources();
 		ThumbnailPool.Reset();
 	}
 
