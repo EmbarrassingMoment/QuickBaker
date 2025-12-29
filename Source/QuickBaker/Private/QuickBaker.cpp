@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "QuickBaker.h"
+#include "QuickBakerUtils.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Layout/SBox.h"
@@ -346,19 +347,7 @@ void FQuickBakerModule::OnMaterialChanged(const FAssetData& AssetData)
 
 	if (SelectedMaterial.IsValid())
 	{
-		FString Name = SelectedMaterial->GetName();
-		if (Name.StartsWith("M_"))
-		{
-			Name = "T_" + Name.RightChop(2);
-		}
-		else if (Name.StartsWith("MI_"))
-		{
-			Name = "T_" + Name.RightChop(3);
-		}
-		else
-		{
-			Name = "T_" + Name;
-		}
+		FString Name = FQuickBakerUtils::GetTextureNameFromMaterial(SelectedMaterial->GetName());
 		OutputName = FText::FromString(Name);
 	}
 }
