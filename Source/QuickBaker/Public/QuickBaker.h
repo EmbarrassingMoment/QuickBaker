@@ -8,6 +8,13 @@
 class FAssetThumbnailPool;
 class FAssetThumbnail;
 
+enum class EQuickBakerOutputType
+{
+	Asset,
+	PNG,
+	EXR
+};
+
 class FQuickBakerModule : public IModuleInterface
 {
 public:
@@ -27,6 +34,9 @@ private:
 
 private:
 	// UI State
+	TSharedPtr<EQuickBakerOutputType> SelectedOutputType;
+	TArray<TSharedPtr<EQuickBakerOutputType>> OutputTypeOptions;
+
 	TSharedPtr<int32> SelectedResolution;
 	TArray<TSharedPtr<int32>> ResolutionOptions;
 
@@ -47,6 +57,10 @@ private:
 	void InitializeOptions();
 
 	// UI Callbacks
+	void OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> NewValue, ESelectInfo::Type SelectInfo);
+	TSharedRef<SWidget> GenerateOutputTypeWidget(TSharedPtr<EQuickBakerOutputType> InOption);
+	FText GetSelectedOutputTypeText() const;
+
 	void OnMaterialChanged(const struct FAssetData& AssetData);
 	FString GetSelectedMaterialPath() const;
 

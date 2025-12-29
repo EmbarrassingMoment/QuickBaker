@@ -47,6 +47,8 @@ public class QuickBaker : ModuleRules
 				"AssetTools",
 				"AssetRegistry",
 				"ContentBrowser",
+				"DesktopPlatform",
+				"ImageWrapper",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -27,6 +27,10 @@
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
 #include "HAL/FileManager.h"
+#include "DesktopPlatformModule.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/FileHelper.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -93,6 +97,15 @@ void FQuickBakerModule::RegisterMenus()
 
 void FQuickBakerModule::InitializeOptions()
 {
+	// Output Type
+	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::Asset));
+	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::PNG));
+	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::EXR));
+	if (OutputTypeOptions.Num() > 0)
+	{
+		SelectedOutputType = OutputTypeOptions[0]; // Asset
+	}
+
 	// Resolution
 	TArray<int32> Resolutions = { 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 	for (int32 Res : Resolutions)
@@ -136,8 +149,35 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 		.TabRole(ETabRole::NomadTab)
 		[
 			SNew(SVerticalBox)
+			// 1. Output Type
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(5)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Center)
+				.Padding(0, 0, 10, 0)
+				[
+					SNew(STextBlock).Text(LOCTEXT("Label_OutputType", "Output Type"))
+				]
+				+ SHorizontalBox::Slot()
+				.FillWidth(1.0f)
+				[
+					SNew(SComboBox<TSharedPtr<EQuickBakerOutputType>>)
+					.ToolTipText(LOCTEXT("Tooltip_OutputType", "Select the output format: Asset, PNG, or EXR."))
+					.OptionsSource(&OutputTypeOptions)
+					.InitiallySelectedItem(SelectedOutputType)
+					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateOutputTypeWidget)
+					.OnSelectionChanged_Raw(this, &FQuickBakerModule::OnOutputTypeChanged)
+					[
+						SNew(STextBlock).Text_Raw(this, &FQuickBakerModule::GetSelectedOutputTypeText)
+					]
+				]
+			]
 
-			// 1. Material Selection
+			// 2. Material Selection
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -178,7 +218,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
-			// 2. Resolution
+			// 3. Resolution
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -206,7 +246,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
-			// 3. Bit Depth
+			// 4. Bit Depth
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -234,7 +274,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
-			// 4. Compression
+			// 5. Compression
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -262,7 +302,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
-			// 5. Output Name
+			// 6. Output Name
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -285,7 +325,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
-			// 6. Output Path
+			// 7. Output Path
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
@@ -307,7 +347,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.VAlign(VAlign_Center)
 					[
 						SNew(STextBlock)
-						.ToolTipText(LOCTEXT("Tooltip_OutputPath", "The destination folder in the Content Browser. If the folder doesn't exist, it will be created automatically upon baking."))
+						.ToolTipText(LOCTEXT("Tooltip_OutputPath", "The destination folder in the Content Browser or on disk."))
 						.Text_Lambda([this] { return FText::FromString(OutputPath); })
 					]
 					+ SHorizontalBox::Slot()
@@ -315,26 +355,82 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.Padding(5, 0, 0, 0)
 					[
 						SNew(SButton)
-						.ToolTipText(LOCTEXT("Tooltip_Browse", "Open the Asset Picker to select a destination folder or create a new one."))
+						.ToolTipText(LOCTEXT("Tooltip_Browse", "Open the Asset Picker or Folder Dialog to select a destination folder."))
 						.Text(LOCTEXT("Browse", "Browse"))
 						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseClicked)
 					]
 				]
 			]
 
-			// 7. Bake Button
+			// 8. Bake Button
 			+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(5)
 			[
 				SNew(SButton)
-				.ToolTipText(LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture."))
+				.ToolTipText(LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File."))
 				.ContentPadding(FMargin(10, 5))
 				.HAlign(HAlign_Center)
 				.Text(LOCTEXT("BakeTexture", "Bake Texture"))
 				.OnClicked_Raw(this, &FQuickBakerModule::OnBakeClicked)
 			]
 		];
+}
+
+void FQuickBakerModule::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> NewValue, ESelectInfo::Type SelectInfo)
+{
+	if (NewValue.IsValid())
+	{
+		SelectedOutputType = NewValue;
+		if (*SelectedOutputType == EQuickBakerOutputType::Asset)
+		{
+			OutputPath = TEXT("/Game/Textures");
+		}
+		else
+		{
+			OutputPath = FPaths::ProjectSavedDir();
+		}
+	}
+}
+
+TSharedRef<SWidget> FQuickBakerModule::GenerateOutputTypeWidget(TSharedPtr<EQuickBakerOutputType> InOption)
+{
+	FString OutputTypeString;
+	switch (*InOption)
+	{
+	case EQuickBakerOutputType::Asset:
+		OutputTypeString = "Texture Asset";
+		break;
+	case EQuickBakerOutputType::PNG:
+		OutputTypeString = "PNG";
+		break;
+	case EQuickBakerOutputType::EXR:
+		OutputTypeString = "EXR";
+		break;
+	}
+	return SNew(STextBlock).Text(FText::FromString(OutputTypeString));
+}
+
+FText FQuickBakerModule::GetSelectedOutputTypeText() const
+{
+	if (!SelectedOutputType.IsValid())
+	{
+		return FText();
+	}
+	FString OutputTypeString;
+	switch (*SelectedOutputType)
+	{
+	case EQuickBakerOutputType::Asset:
+		OutputTypeString = "Texture Asset";
+		break;
+	case EQuickBakerOutputType::PNG:
+		OutputTypeString = "PNG";
+		break;
+	case EQuickBakerOutputType::EXR:
+		OutputTypeString = "EXR";
+		break;
+	}
+	return FText::FromString(OutputTypeString);
 }
 
 void FQuickBakerModule::OnMaterialChanged(const FAssetData& AssetData)
@@ -441,20 +537,45 @@ FReply FQuickBakerModule::OnBakeClicked()
 
 FReply FQuickBakerModule::OnBrowseClicked()
 {
-	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-	FSaveAssetDialogConfig SaveAssetDialogConfig;
-	SaveAssetDialogConfig.DefaultPath = OutputPath;
-	SaveAssetDialogConfig.DefaultAssetName = OutputName.ToString();
-	SaveAssetDialogConfig.AssetClassNames.Add(UTexture2D::StaticClass()->GetClassPathName());
-	SaveAssetDialogConfig.ExistingAssetPolicy = ESaveAssetDialogExistingAssetPolicy::AllowButWarn;
-	SaveAssetDialogConfig.DialogTitleOverride = LOCTEXT("SaveTextureDialog", "Save Texture");
-
-	FString SaveObjectPath = ContentBrowserModule.Get().CreateModalSaveAssetDialog(SaveAssetDialogConfig);
-	if (!SaveObjectPath.IsEmpty())
+	if (!SelectedOutputType.IsValid())
 	{
-		FString PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
-		OutputPath = FPackageName::GetLongPackagePath(PackageName);
-		OutputName = FText::FromString(FPackageName::GetShortName(PackageName));
+		return FReply::Handled();
+	}
+
+	if (*SelectedOutputType == EQuickBakerOutputType::Asset)
+	{
+		FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+		FSaveAssetDialogConfig SaveAssetDialogConfig;
+		SaveAssetDialogConfig.DefaultPath = OutputPath;
+		SaveAssetDialogConfig.DefaultAssetName = OutputName.ToString();
+		SaveAssetDialogConfig.AssetClassNames.Add(UTexture2D::StaticClass()->GetClassPathName());
+		SaveAssetDialogConfig.ExistingAssetPolicy = ESaveAssetDialogExistingAssetPolicy::AllowButWarn;
+		SaveAssetDialogConfig.DialogTitleOverride = LOCTEXT("SaveTextureDialog", "Save Texture");
+
+		FString SaveObjectPath = ContentBrowserModule.Get().CreateModalSaveAssetDialog(SaveAssetDialogConfig);
+		if (!SaveObjectPath.IsEmpty())
+		{
+			FString PackageName = FPackageName::ObjectPathToPackageName(SaveObjectPath);
+			OutputPath = FPackageName::GetLongPackagePath(PackageName);
+			OutputName = FText::FromString(FPackageName::GetShortName(PackageName));
+		}
+	}
+	else
+	{
+		if (IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get())
+		{
+			FString FolderName;
+			const void* ParentWindowWindowHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
+
+			if (DesktopPlatform->OpenDirectoryDialog(
+				ParentWindowWindowHandle,
+				LOCTEXT("SelectFolder", "Select Output Folder").ToString(),
+				OutputPath,
+				FolderName))
+			{
+				OutputPath = FolderName;
+			}
+		}
 	}
 
 	return FReply::Handled();
@@ -469,25 +590,36 @@ void FQuickBakerModule::ExecuteBake()
 		return;
 	}
 
-	if (!SelectedResolution.IsValid() || !SelectedBitDepth.IsValid() || !SelectedCompression.IsValid())
+	if (!SelectedResolution.IsValid() || !SelectedBitDepth.IsValid() || !SelectedCompression.IsValid() || !SelectedOutputType.IsValid())
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_InvalidSettings", "Invalid bake settings."));
 		return;
 	}
 
 	const int32 Resolution = *SelectedResolution;
-	const bool bIs16Bit = *SelectedBitDepth == "16-bit";
-	const FString Name = OutputName.ToString();
-	FString PackagePath = OutputPath;
+	// For PNG force 8bit, for EXR force 16bit float
+	const bool bIsAsset = *SelectedOutputType == EQuickBakerOutputType::Asset;
+	const bool bIsPNG = *SelectedOutputType == EQuickBakerOutputType::PNG;
+	const bool bIsEXR = *SelectedOutputType == EQuickBakerOutputType::EXR;
 
-	if (!PackagePath.StartsWith(TEXT("/Game/")))
+	// If Asset, use UI selection. If PNG -> 8bit. If EXR -> 16bit float.
+	ETextureRenderTargetFormat Format = RTF_RGBA16f;
+	if (bIsAsset)
 	{
-		PackagePath = TEXT("/Game/") + PackagePath;
+		bool bIs16Bit = *SelectedBitDepth == "16-bit";
+		Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
 	}
-	while (PackagePath.EndsWith(TEXT("/")) && PackagePath.Len() > 1)
+	else if (bIsPNG)
 	{
-		PackagePath.LeftChopInline(1);
+		Format = RTF_RGBA8;
 	}
+	else if (bIsEXR)
+	{
+		Format = RTF_RGBA16f;
+	}
+
+	const FString Name = OutputName.ToString();
+	FString Path = OutputPath;
 
 	if (Name.IsEmpty())
 	{
@@ -495,85 +627,146 @@ void FQuickBakerModule::ExecuteBake()
 		return;
 	}
 
-	// Ensure directory exists
-	FString FullPackageName = FPaths::Combine(PackagePath, Name);
-	FString AssetPackageFilename;
-	if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, AssetPackageFilename))
-	{
-		FString PackageDirectory = FPaths::GetPath(AssetPackageFilename);
-		if (!IFileManager::Get().DirectoryExists(*PackageDirectory))
-		{
-			if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
-			{
-				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_MakeDirectory", "Failed to create output directory."));
-				return;
-			}
-		}
-	}
-
-	FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
-
 	// 2. Setup Render Target
 	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
 	check(RenderTarget);
 	RenderTarget->InitAutoFormat(Resolution, Resolution);
-	RenderTarget->RenderTargetFormat = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
-	RenderTarget->bForceLinearGamma = true; // Often needed for data, but let's stick to requirement sRGB=false which implies linear.
-	RenderTarget->SRGB = false; // Requirement: bSRGB = false
+	RenderTarget->RenderTargetFormat = Format;
+	RenderTarget->bForceLinearGamma = true;
+	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
 
 	// 3. Bake Material
 	UObject* WorldContextObject = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	UKismetRenderingLibrary::ClearRenderTarget2D(WorldContextObject, RenderTarget, FLinearColor::Black);
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(WorldContextObject, RenderTarget, SelectedMaterial.Get());
 
-	// 4. Convert to Static Texture
-	FString PackageName = FullPackageName;
-	FString AssetName = Name;
-
-	// Create Package
-	UPackage* Package = CreatePackage(*PackageName);
-
-	// Requirement: Use UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly or FAssetToolsModule
-	// RenderTargetCreateStaticTexture2DEditorOnly creates a new asset.
-
-	UTexture2D* NewTexture = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, Name, *SelectedCompression);
-
-	if (NewTexture)
+	if (bIsAsset)
 	{
-		// Move the texture to the correct package if needed, or check if RenderTargetCreateStaticTexture2DEditorOnly handles it.
-		// RenderTargetCreateStaticTexture2DEditorOnly usually creates it in the Transient package or similar if not specified.
-		// Wait, the function signature is: (UTextureRenderTarget2D* RenderTarget, FString Name = "Texture", TextureCompressionSettings CompressionSettings = TC_Default, TextureMipGenSettings MipSettings = TMGS_FromTextureGroup)
-		// It doesn't take a path. It creates it in the Transient package usually? Or maybe allows renaming.
+		FString PackagePath = Path;
+		if (!PackagePath.StartsWith(TEXT("/Game/")))
+		{
+			PackagePath = TEXT("/Game/") + PackagePath;
+		}
+		while (PackagePath.EndsWith(TEXT("/")) && PackagePath.Len() > 1)
+		{
+			PackagePath.LeftChopInline(1);
+		}
 
-		// A common pattern is to duplicate/rename or simply use it as source.
-		// BUT the requirements say: "Create a new UTexture2D asset in the specified path."
+		// Ensure directory exists
+		FString FullPackageName = FPaths::Combine(PackagePath, Name);
+		FString AssetPackageFilename;
+		if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, AssetPackageFilename))
+		{
+			FString PackageDirectory = FPaths::GetPath(AssetPackageFilename);
+			if (!IFileManager::Get().DirectoryExists(*PackageDirectory))
+			{
+				if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
+				{
+					FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_MakeDirectory", "Failed to create output directory."));
+					return;
+				}
+			}
+		}
 
-		// If UKismetRenderingLibrary doesn't support path, let's use FAssetToolsModule or duplicate.
-		// Actually, let's check if we can rename it to the target package.
+		FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
 
-		NewTexture->Rename(*AssetName, Package);
+		// 4. Convert to Static Texture
+		FString PackageName = FullPackageName;
+		FString AssetName = Name;
 
-		// 5. Texture Settings
-		NewTexture->CompressionSettings = *SelectedCompression;
-		NewTexture->SRGB = false; // Requirement: sRGB = false
+		// Create Package
+		UPackage* Package = CreatePackage(*PackageName);
 
-		// Save
-		NewTexture->MarkPackageDirty();
-		NewTexture->PostEditChange();
+		UTexture2D* NewTexture = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, Name, *SelectedCompression);
 
-		// Notify Asset Registry
-		FAssetRegistryModule::AssetCreated(NewTexture);
+		if (NewTexture)
+		{
+			NewTexture->Rename(*AssetName, Package);
 
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
+			// 5. Texture Settings
+			NewTexture->CompressionSettings = *SelectedCompression;
+			NewTexture->SRGB = false; // Requirement: sRGB = false
+
+			// Save
+			NewTexture->MarkPackageDirty();
+			NewTexture->PostEditChange();
+
+			// Notify Asset Registry
+			FAssetRegistryModule::AssetCreated(NewTexture);
+
+			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
+		}
+		else
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_BakeFailed", "Failed to create texture from render target."));
+		}
 	}
 	else
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_BakeFailed", "Failed to create texture from render target."));
+		// External Export
+		FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+		if (RTResource)
+		{
+			FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
+			ReadPixelFlags.SetLinearToGamma(false);
+
+			TArray<uint8> CompressedData;
+			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+
+			if (bIsPNG)
+			{
+				// PNG Export (8-bit)
+				TArray<FColor> Bitmap;
+				RTResource->ReadPixels(Bitmap, ReadPixelFlags);
+
+				// Force Alpha to 255 (Opaque)
+				for (FColor& Pixel : Bitmap)
+				{
+					Pixel.A = 255;
+				}
+
+				TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+				if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), Resolution, Resolution, ERGBFormat::BGRA, 8))
+				{
+					CompressedData = ImageWrapper->GetCompressed();
+				}
+			}
+			else if (bIsEXR)
+			{
+				// EXR Export (16-bit float)
+				TArray<FFloat16Color> Bitmap;
+				RTResource->ReadFloat16Pixels(Bitmap); // ReadFloat16Pixels does not take flags usually, checking docs or assuming standard behavior
+
+				TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
+				if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), Resolution, Resolution, ERGBFormat::RGBAF, 16))
+				{
+					CompressedData = ImageWrapper->GetCompressed();
+				}
+			}
+
+			if (CompressedData.Num() > 0)
+			{
+				FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
+				FString FullPath = FPaths::Combine(Path, Name + Extension);
+
+				if (FFileHelper::SaveArrayToFile(CompressedData, *FullPath))
+				{
+					FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath)));
+				}
+				else
+				{
+					FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_SaveFile", "Failed to save file to disk."));
+				}
+			}
+			else
+			{
+				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_ImageConversion", "Failed to convert image."));
+			}
+		}
 	}
 
-	// 6. Cleanup
-	// RenderTarget is a UObject, will be garbage collected. Explicit cleanup usually means removing from root if added, but here it's local.
-	// We can manually mark it pending kill if we want immediate cleanup, but GC handles it.
+	// 6. Cleanup handled by GC
 }
 
 #undef LOCTEXT_NAMESPACE
