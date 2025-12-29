@@ -168,7 +168,12 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.VAlign(VAlign_Bottom)
 				.Padding(5, 0, 0, 0)
 				[
-					(MaterialThumbnail = MakeShareable(new FAssetThumbnail(SelectedMaterial.Get(), 64, 64, ThumbnailPool)))->MakeThumbnailWidget()
+					SNew(SBox)
+					.WidthOverride(64)
+					.HeightOverride(64)
+					[
+						(MaterialThumbnail = MakeShareable(new FAssetThumbnail(SelectedMaterial.Get(), 64, 64, ThumbnailPool)))->MakeThumbnailWidget()
+					]
 				]
 			]
 
