@@ -145,6 +145,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SObjectPropertyEntryBox)
+					.ToolTipText(LOCTEXT("Tooltip_Material", "Select the Material or Material Instance to bake. The 'Final Color' (Emissive) will be captured."))
 					.AllowedClass(UMaterialInterface::StaticClass())
 					.ObjectPath_Raw(this, &FQuickBakerModule::GetSelectedMaterialPath)
 					.OnObjectChanged_Raw(this, &FQuickBakerModule::OnMaterialChanged)
@@ -171,6 +172,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SComboBox<TSharedPtr<int32>>)
+					.ToolTipText(LOCTEXT("Tooltip_Resolution", "Set the width and height of the output texture. Higher values provide more detail but use more memory."))
 					.OptionsSource(&ResolutionOptions)
 					.InitiallySelectedItem(SelectedResolution)
 					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateResolutionWidget)
@@ -198,6 +200,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SComboBox<TSharedPtr<FString>>)
+					.ToolTipText(LOCTEXT("Tooltip_BitDepth", "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."))
 					.OptionsSource(&BitDepthOptions)
 					.InitiallySelectedItem(SelectedBitDepth)
 					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateBitDepthWidget)
@@ -225,6 +228,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SComboBox<TSharedPtr<TextureCompressionSettings>>)
+					.ToolTipText(LOCTEXT("Tooltip_Compression", "Select the compression format for the resulting texture. TC_Default is standard for most cases."))
 					.OptionsSource(&CompressionOptions)
 					.InitiallySelectedItem(SelectedCompression)
 					.OnGenerateWidget_Raw(this, &FQuickBakerModule::GenerateCompressionWidget)
@@ -252,6 +256,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				.FillWidth(1.0f)
 				[
 					SNew(SEditableTextBox)
+					.ToolTipText(LOCTEXT("Tooltip_OutputName", "The name of the generated Texture asset. Automatically prefixed with T_ based on naming conventions."))
 					.Text_Lambda([this] { return OutputName; })
 					.OnTextChanged_Raw(this, &FQuickBakerModule::OnOutputNameChanged)
 				]
@@ -278,13 +283,16 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.FillWidth(1.0f)
 					.VAlign(VAlign_Center)
 					[
-						SNew(STextBlock).Text_Lambda([this] { return FText::FromString(OutputPath); })
+						SNew(STextBlock)
+						.ToolTipText(LOCTEXT("Tooltip_OutputPath", "The destination folder in the Content Browser. If the folder doesn't exist, it will be created automatically upon baking."))
+						.Text_Lambda([this] { return FText::FromString(OutputPath); })
 					]
 					+ SHorizontalBox::Slot()
 					.AutoWidth()
 					.Padding(5, 0, 0, 0)
 					[
 						SNew(SButton)
+						.ToolTipText(LOCTEXT("Tooltip_Browse", "Open the Asset Picker to select a destination folder or create a new one."))
 						.Text(LOCTEXT("Browse", "Browse"))
 						.OnClicked_Raw(this, &FQuickBakerModule::OnBrowseClicked)
 					]
@@ -297,6 +305,7 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 			.Padding(5)
 			[
 				SNew(SButton)
+				.ToolTipText(LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture."))
 				.ContentPadding(FMargin(10, 5))
 				.HAlign(HAlign_Center)
 				.Text(LOCTEXT("BakeTexture", "Bake Texture"))
