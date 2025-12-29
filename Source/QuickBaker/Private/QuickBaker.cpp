@@ -9,6 +9,7 @@
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "PropertyCustomizationHelpers.h"
+#include "AssetThumbnail.h"
 #include "EditorStyleSet.h"
 #include "Materials/MaterialInterface.h"
 #include "Engine/Texture.h"
@@ -32,6 +33,8 @@ static const FName QuickBakerTabName("QuickBaker");
 
 void FQuickBakerModule::StartupModule()
 {
+	ThumbnailPool = MakeShareable(new FAssetThumbnailPool(24));
+
 	InitializeOptions();
 
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -47,6 +50,12 @@ void FQuickBakerModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+
+	if (ThumbnailPool.IsValid())
+	{
+		ThumbnailPool->ReleaseResources();
+		ThumbnailPool.Reset();
+	}
 
 	UToolMenus::UnRegisterStartupCallback(this);
 
@@ -136,13 +145,14 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot()
 				.AutoWidth()
-				.VAlign(VAlign_Center)
-				.Padding(0, 0, 10, 0)
+				.VAlign(VAlign_Bottom)
+				.Padding(0, 0, 10, 4)
 				[
 					SNew(STextBlock).Text(LOCTEXT("Label_Material", "Material"))
 				]
 				+ SHorizontalBox::Slot()
 				.FillWidth(1.0f)
+				.VAlign(VAlign_Bottom)
 				[
 					SNew(SObjectPropertyEntryBox)
 					.ToolTipText(LOCTEXT("Tooltip_Material", "Select the Material or Material Instance to bake. The 'Final Color' (Emissive) will be captured."))
@@ -152,6 +162,14 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 					.AllowClear(true)
 					.DisplayUseSelected(true)
 					.DisplayBrowse(true)
+					.DisplayThumbnail(false)
+				]
+				+ SHorizontalBox::Slot()
+				.AutoWidth()
+				.VAlign(VAlign_Bottom)
+				.Padding(5, 0, 0, 0)
+				[
+					(MaterialThumbnail = MakeShareable(new FAssetThumbnail(SelectedMaterial.Get(), 64, 64, ThumbnailPool)))->MakeThumbnailWidget()
 				]
 			]
 
@@ -317,6 +335,11 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 void FQuickBakerModule::OnMaterialChanged(const FAssetData& AssetData)
 {
 	SelectedMaterial = Cast<UMaterialInterface>(AssetData.GetAsset());
+	if (MaterialThumbnail.IsValid())
+	{
+		MaterialThumbnail->SetAsset(AssetData);
+	}
+
 	if (SelectedMaterial.IsValid())
 	{
 		FString Name = SelectedMaterial->GetName();
