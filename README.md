@@ -75,5 +75,16 @@ It is **not designed** for baking lighting, shadows, or normal maps.
 
 Note: PNG export is locked to 8-bit, EXR export is locked to 16-bit float.
 
+## Architecture
+
+The QuickBaker codebase follows the Single Responsibility Principle and is organized into the following components:
+
+- **FQuickBakerModule**: Handles module lifecycle, menu registration, and tab spawning.
+- **FQuickBakerSettings**: Data structure defining bake configuration (Resolution, Output Type, etc.) and validation logic.
+- **FQuickBakerCore**: Contains the core baking business logic, including Render Target setup, rendering, and saving.
+- **FQuickBakerExporter**: Dedicated class for exporting textures to external file formats (PNG/EXR).
+- **SQuickBakerWidget**: Slate UI widget implementation, managing user interaction and state.
+- **QuickBakerUtils**: Static utility functions (e.g., naming conventions).
+
 ## License
 This project is available under the MIT License.
