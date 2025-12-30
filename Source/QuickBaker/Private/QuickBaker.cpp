@@ -654,11 +654,11 @@ void FQuickBakerModule::ExecuteBake()
 		return;
 	}
 
-	// 進捗表示の初期化（3つのフェーズ）
+	// Initialize progress display (3 phases)
 	FScopedSlowTask Task(3.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
 	Task.MakeDialog();
 
-	// フェーズ1: Render Target セットアップ
+	// Phase 1: Render Target Setup
 	Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
 
 	// 2. Setup Render Target
@@ -675,10 +675,10 @@ void FQuickBakerModule::ExecuteBake()
 	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
 
-	// GC対策
+	// GC Protection
 	RenderTarget->AddToRoot();
 
-	// スコープ終了時に確実にクリーンアップ
+	// Ensure cleanup at end of scope
 	ON_SCOPE_EXIT
 	{
 		if (RenderTarget)
@@ -688,7 +688,7 @@ void FQuickBakerModule::ExecuteBake()
 		}
 	};
 
-	// フェーズ2: マテリアルレンダリング
+	// Phase 2: Material Rendering
 	Task.EnterProgressFrame(1.0f, LOCTEXT("Rendering", "Rendering Material..."));
 
 	// 3. Bake Material
@@ -707,7 +707,7 @@ void FQuickBakerModule::ExecuteBake()
 	UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, SelectedMaterial.Get());
 
-	// フェーズ3: 保存
+	// Phase 3: Save
 	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving Asset..."));
 
 	if (bIsAsset)
@@ -738,7 +738,7 @@ void FQuickBakerModule::ExecuteBake()
 			}
 		}
 
-		// Asset作成時のみトランザクションを使用
+		// Use transaction only when creating Asset
 		FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
 
 		// 4. Convert to Static Texture
