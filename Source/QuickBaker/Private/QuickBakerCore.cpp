@@ -31,7 +31,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	ETextureRenderTargetFormat Format = RTF_RGBA16f;
 	if (bIsAsset)
 	{
-		bool bIs16Bit = Settings.BitDepth == "16-bit";
+		bool bIs16Bit = Settings.BitDepth == EQuickBakerBitDepth::Bit16;
 		Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
 	}
 	else if (bIsPNG)

@@ -24,13 +24,13 @@ private:
 	// Options for ComboBoxes
 	TArray<TSharedPtr<EQuickBakerOutputType>> OutputTypeOptions;
 	TArray<TSharedPtr<int32>> ResolutionOptions;
-	TArray<TSharedPtr<FString>> BitDepthOptions;
+	TArray<TSharedPtr<EQuickBakerBitDepth>> BitDepthOptions;
 	TArray<TSharedPtr<TextureCompressionSettings>> CompressionOptions;
 
 	// Current Selections (matching Settings logic but as pointers for ComboBox)
 	TSharedPtr<EQuickBakerOutputType> SelectedOutputType;
 	TSharedPtr<int32> SelectedResolution;
-	TSharedPtr<FString> SelectedBitDepth;
+	TSharedPtr<EQuickBakerBitDepth> SelectedBitDepth;
 	TSharedPtr<TextureCompressionSettings> SelectedCompression;
 
 	// Thumbnail Helpers
@@ -52,8 +52,8 @@ private:
 	TSharedRef<SWidget> GenerateResolutionWidget(TSharedPtr<int32> InOption);
 	FText GetSelectedResolutionText() const;
 
-	void OnBitDepthChanged(TSharedPtr<FString> NewValue, ESelectInfo::Type SelectInfo);
-	TSharedRef<SWidget> GenerateBitDepthWidget(TSharedPtr<FString> InOption);
+	void OnBitDepthChanged(TSharedPtr<EQuickBakerBitDepth> NewValue, ESelectInfo::Type SelectInfo);
+	TSharedRef<SWidget> GenerateBitDepthWidget(TSharedPtr<EQuickBakerBitDepth> InOption);
 	FText GetSelectedBitDepthText() const;
 
 	void OnCompressionChanged(TSharedPtr<TextureCompressionSettings> NewValue, ESelectInfo::Type SelectInfo);
