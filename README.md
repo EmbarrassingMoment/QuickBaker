@@ -2,6 +2,24 @@
 
 QuickBaker is a simple and fast tool to bake Material expressions (Emissive/Final Color) into Static Textures for Unreal Engine 5.5+.
 
+## Architecture
+
+The QuickBaker plugin is structured following the Single Responsibility Principle, ensuring maintainability and scalability.
+
+### Class Diagram / Responsibilities
+
+- **FQuickBakerModule**: Handles module lifecycle (startup/shutdown), registers the editor tab, and manages menu entries.
+- **FQuickBakerSettings**: A pure data structure (struct) that holds the configuration for the bake operation (Resolution, Output Type, Paths, etc.). Includes validation logic.
+- **FQuickBakerCore**: Contains the core business logic for the baking process.
+  - Setup of Render Targets.
+  - Rendering of the selected material.
+  - Handling creation of Texture Assets (`.uasset`) and transactions.
+- **FQuickBakerExporter**: Dedicated class for exporting render targets to external files (PNG, EXR). Handles image wrapper interactions and file system writing.
+- **SQuickBakerWidget**: The Slate UI widget.
+  - Manages all UI elements (ComboBoxes, Buttons, Thumbnails).
+  - Handles user interactions.
+  - Constructs `FQuickBakerSettings` from UI state and delegates execution to `FQuickBakerCore`.
+
 ## Introduction
 QuickBaker streamlines the process of converting dynamic materials into static textures. Whether you need to bake complex noise patterns, signed distance fields (SDF), or procedural textures, QuickBaker handles the setup, rendering, and saving process with a single click. It supports saving directly as a Texture Asset (`.uasset`) or exporting to disk as PNG or EXR.
 
