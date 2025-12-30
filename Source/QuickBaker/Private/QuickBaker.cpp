@@ -193,6 +193,17 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 				]
 			]
 
+			// Hint Text
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(5, 0, 5, 5)
+			[
+				SNew(STextBlock)
+				.Text(LOCTEXT("MaterialHint", "Tip: Use Unlit materials or ensure Emissive (Final Color) is connected."))
+				.ColorAndOpacity(FLinearColor(1.0f, 0.8f, 0.0f)) // Yellow
+				.Font(FCoreStyle::GetDefaultFontStyle("Italic", 8))
+			]
+
 			// 2. Output Type
 			+ SVerticalBox::Slot()
 			.AutoHeight()
@@ -470,6 +481,19 @@ void FQuickBakerModule::OnMaterialChanged(const FAssetData& AssetData)
 
 	if (SelectedMaterial.IsValid())
 	{
+		// Shading Model Check
+		FMaterialShadingModelField ShadingModels = SelectedMaterial->GetShadingModels();
+
+		if (!ShadingModels.HasShadingModel(MSM_Unlit))
+		{
+			// Log warning if not Unlit
+			UE_LOG(LogTemp, Warning,
+				TEXT("QuickBaker: Selected material '%s' is not Unlit. "
+					"The tool captures Final Color (Emissive) output. "
+					"For best results, use Unlit materials or ensure Emissive is connected."),
+				*SelectedMaterial->GetName());
+		}
+
 		FString Name = FQuickBakerUtils::GetTextureNameFromMaterial(SelectedMaterial->GetName());
 		OutputName = FText::FromString(Name);
 	}
