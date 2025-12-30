@@ -31,6 +31,7 @@
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Misc/FileHelper.h"
+#include "Misc/ScopeExit.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -653,12 +654,30 @@ void FQuickBakerModule::ExecuteBake()
 
 	// 2. Setup Render Target
 	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
-	check(RenderTarget);
+	if (!RenderTarget)
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_RTCreate", "Failed to create render target."));
+		return;
+	}
+
 	RenderTarget->InitAutoFormat(Resolution, Resolution);
 	RenderTarget->RenderTargetFormat = Format;
 	RenderTarget->bForceLinearGamma = true;
 	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
+
+	// GC対策
+	RenderTarget->AddToRoot();
+
+	// スコープ終了時に確実にクリーンアップ
+	ON_SCOPE_EXIT
+	{
+		if (RenderTarget)
+		{
+			RenderTarget->RemoveFromRoot();
+			RenderTarget->MarkAsGarbage();
+		}
+	};
 
 	// 3. Bake Material
 	UObject* WorldContextObject = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
@@ -693,6 +712,7 @@ void FQuickBakerModule::ExecuteBake()
 			}
 		}
 
+		// Asset作成時のみトランザクションを使用
 		FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
 
 		// 4. Convert to Static Texture
@@ -790,7 +810,6 @@ void FQuickBakerModule::ExecuteBake()
 		}
 	}
 
-	// 6. Cleanup handled by GC
 }
 
 #undef LOCTEXT_NAMESPACE
