@@ -828,9 +828,17 @@ void FQuickBakerModule::ExecuteBake()
 			}
 			else if (bIsEXR)
 			{
-				// EXR Export (16-bit float)
+				// EXR Export (16-bit float, Linear color space)
+				TArray<FLinearColor> LinearBitmap;
+				RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
+
+				// Convert FLinearColor to FFloat16Color for EXR export
 				TArray<FFloat16Color> Bitmap;
-				RTResource->ReadFloat16Pixels(Bitmap); // ReadFloat16Pixels does not take flags usually, checking docs or assuming standard behavior
+				Bitmap.Reserve(LinearBitmap.Num());
+				for (const FLinearColor& Color : LinearBitmap)
+				{
+					Bitmap.Add(FFloat16Color(Color));
+				}
 
 				TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
 				if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), Resolution, Resolution, ERGBFormat::RGBAF, 16))
