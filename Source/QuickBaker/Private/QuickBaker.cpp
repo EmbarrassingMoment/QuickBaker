@@ -33,6 +33,7 @@
 #include "IImageWrapperModule.h"
 #include "Misc/FileHelper.h"
 #include "Misc/ScopeExit.h"
+#include "Misc/ScopedSlowTask.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -653,6 +654,13 @@ void FQuickBakerModule::ExecuteBake()
 		return;
 	}
 
+	// 進捗表示の初期化（3つのフェーズ）
+	FScopedSlowTask Task(3.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
+	Task.MakeDialog();
+
+	// フェーズ1: Render Target セットアップ
+	Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
+
 	// 2. Setup Render Target
 	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
 	if (!RenderTarget)
@@ -680,6 +688,9 @@ void FQuickBakerModule::ExecuteBake()
 		}
 	};
 
+	// フェーズ2: マテリアルレンダリング
+	Task.EnterProgressFrame(1.0f, LOCTEXT("Rendering", "Rendering Material..."));
+
 	// 3. Bake Material
 	UWorld* World = nullptr;
 	if (GEditor)
@@ -695,6 +706,9 @@ void FQuickBakerModule::ExecuteBake()
 
 	UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, SelectedMaterial.Get());
+
+	// フェーズ3: 保存
+	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving Asset..."));
 
 	if (bIsAsset)
 	{
