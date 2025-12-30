@@ -45,5 +45,35 @@ QuickBaker streamlines the process of converting dynamic materials into static t
 ## Requirements
 - Unreal Engine 5.5 or later.
 
+## FAQ
+
+### Q: The baked texture is completely black. What's wrong?
+**A:** QuickBaker captures the **Final Color (Emissive)** output of materials. If your material doesn't have anything connected to the Emissive Color pin, the output will be black.
+
+**Solutions:**
+- **Use Unlit Materials**: Unlit materials only use the Emissive Color input, making them ideal for baking.
+- **Connect to Emissive**: If using a Lit material (DefaultLit, Subsurface, etc.), connect your desired output to the **Emissive Color** pin.
+- **Example Setup**:
+  - For noise textures: Connect your noise directly to Emissive Color.
+  - For color/albedo: Connect Base Color to Emissive Color.
+  - For normal maps: This tool is not suitable (use dedicated normal map bakers).
+
+### Q: Which texture types work best with QuickBaker?
+**A:** QuickBaker excels at baking:
+- Procedural noise patterns
+- Signed Distance Fields (SDF)
+- Gradient textures
+- Mathematical/computational textures
+- Any Material Expression that outputs a color
+
+It is **not designed** for baking lighting, shadows, or normal maps.
+
+### Q: What's the difference between 8-bit and 16-bit?
+**A:**
+- **8-bit**: Standard color precision. Use for regular textures.
+- **16-bit**: High precision. **Strongly recommended** for noise textures and SDFs to avoid color banding/posterization.
+
+Note: PNG export is locked to 8-bit, EXR export is locked to 16-bit float.
+
 ## License
 This project is available under the MIT License.
