@@ -47,6 +47,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
 	if (!RenderTarget)
 	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_RTCreate", "Failed to create render target."));
 		return;
 	}
@@ -81,6 +82,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 	if (!World)
 	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: No valid editor world found."));
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoWorld", "No valid editor world found."));
 		return;
 	}
@@ -103,10 +105,12 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 		if (FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG))
 		{
+			UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
 			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath)));
 		}
 		else
 		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to save file to disk or convert image at %s"), *FullPath);
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image."));
 		}
 	}
@@ -134,6 +138,7 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		{
 			if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
 			{
+				UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create output directory at %s"), *PackageDirectory);
 				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_MakeDirectory", "Failed to create output directory."));
 				return;
 			}
@@ -163,10 +168,12 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		// Notify Asset Registry
 		FAssetRegistryModule::AssetCreated(NewTexture);
 
+		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset success: Texture baked successfully at %s"), *FullPackageName);
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
 	}
 	else
 	{
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create texture from render target at %s"), *FullPackageName);
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_BakeFailed", "Failed to create texture from render target."));
 	}
 }
