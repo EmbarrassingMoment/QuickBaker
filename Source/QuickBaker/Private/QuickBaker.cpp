@@ -5,7 +5,6 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "ToolMenus.h"
-#include "EditorStyleSet.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
