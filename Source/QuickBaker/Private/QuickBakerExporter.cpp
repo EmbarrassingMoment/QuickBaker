@@ -5,18 +5,22 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
+DEFINE_LOG_CATEGORY(LogQuickBaker);
+
 #define LOCTEXT_NAMESPACE "FQuickBakerExporter"
 
 bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, const FString& FullPath, bool bIsPNG)
 {
 	if (!RenderTarget)
 	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: RenderTarget is null."));
 		return false;
 	}
 
 	FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	if (!RTResource)
 	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not get RenderTarget Resource from %s."), *RenderTarget->GetName());
 		return false;
 	}
 
@@ -43,6 +47,10 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: PNG Image compression failed for %s."), *FullPath);
+		}
 	}
 	else
 	{
@@ -63,11 +71,23 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: EXR Image compression failed for %s."), *FullPath);
+		}
 	}
 
 	if (CompressedData.Num() > 0)
 	{
-		return FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
+		if (FFileHelper::SaveArrayToFile(CompressedData, *FullPath))
+		{
+			UE_LOG(LogQuickBaker, Log, TEXT("Successfully exported texture to %s"), *FullPath);
+			return true;
+		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not write file to %s"), *FullPath);
+		}
 	}
 
 	return false;

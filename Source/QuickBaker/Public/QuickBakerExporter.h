@@ -1,7 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Logging/LogMacros.h"
 #include "Engine/TextureRenderTarget2D.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogQuickBaker, Log, All);
 
 class QUICKBAKER_API FQuickBakerExporter
 {
