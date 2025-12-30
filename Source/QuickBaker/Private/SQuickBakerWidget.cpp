@@ -151,7 +151,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
 			[
-				SNew(SComboBox<TSharedPtr<FString>>)
+				SNew(SComboBox<TSharedPtr<EQuickBakerBitDepth>>)
 				.IsEnabled_Lambda([this]() { return SelectedOutputType.IsValid() && *SelectedOutputType == EQuickBakerOutputType::Asset; })
 				.ToolTipText(LOCTEXT("Tooltip_BitDepth", "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."))
 				.OptionsSource(&BitDepthOptions)
@@ -305,8 +305,8 @@ void SQuickBakerWidget::InitializeOptions()
 	}
 
 	// Bit Depth
-	BitDepthOptions.Add(MakeShared<FString>("8-bit"));
-	BitDepthOptions.Add(MakeShared<FString>("16-bit"));
+	BitDepthOptions.Add(MakeShared<EQuickBakerBitDepth>(EQuickBakerBitDepth::Bit8));
+	BitDepthOptions.Add(MakeShared<EQuickBakerBitDepth>(EQuickBakerBitDepth::Bit16));
 	if (BitDepthOptions.Num() > 1)
 	{
 		SelectedBitDepth = BitDepthOptions[1]; // 16-bit
@@ -348,7 +348,7 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 		{
 			for (const auto& Option : BitDepthOptions)
 			{
-				if (*Option == TEXT("8-bit"))
+				if (*Option == EQuickBakerBitDepth::Bit8)
 				{
 					SelectedBitDepth = Option;
 					break;
@@ -359,7 +359,7 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 		{
 			for (const auto& Option : BitDepthOptions)
 			{
-				if (*Option == TEXT("16-bit"))
+				if (*Option == EQuickBakerBitDepth::Bit16)
 				{
 					SelectedBitDepth = Option;
 					break;
@@ -462,7 +462,7 @@ FText SQuickBakerWidget::GetSelectedResolutionText() const
 	return SelectedResolution.IsValid() ? FText::AsNumber(*SelectedResolution) : FText();
 }
 
-void SQuickBakerWidget::OnBitDepthChanged(TSharedPtr<FString> NewValue, ESelectInfo::Type SelectInfo)
+void SQuickBakerWidget::OnBitDepthChanged(TSharedPtr<EQuickBakerBitDepth> NewValue, ESelectInfo::Type SelectInfo)
 {
 	if (NewValue.IsValid())
 	{
@@ -471,14 +471,24 @@ void SQuickBakerWidget::OnBitDepthChanged(TSharedPtr<FString> NewValue, ESelectI
 	}
 }
 
-TSharedRef<SWidget> SQuickBakerWidget::GenerateBitDepthWidget(TSharedPtr<FString> InOption)
+TSharedRef<SWidget> SQuickBakerWidget::GenerateBitDepthWidget(TSharedPtr<EQuickBakerBitDepth> InOption)
 {
-	return SNew(STextBlock).Text(FText::FromString(*InOption));
+	FString BitDepthString;
+	if (InOption.IsValid())
+	{
+		BitDepthString = (*InOption == EQuickBakerBitDepth::Bit8) ? TEXT("8-bit") : TEXT("16-bit");
+	}
+	return SNew(STextBlock).Text(FText::FromString(BitDepthString));
 }
 
 FText SQuickBakerWidget::GetSelectedBitDepthText() const
 {
-	return SelectedBitDepth.IsValid() ? FText::FromString(*SelectedBitDepth) : FText();
+	if (!SelectedBitDepth.IsValid())
+	{
+		return FText();
+	}
+	FString BitDepthString = (*SelectedBitDepth == EQuickBakerBitDepth::Bit8) ? TEXT("8-bit") : TEXT("16-bit");
+	return FText::FromString(BitDepthString);
 }
 
 void SQuickBakerWidget::OnCompressionChanged(TSharedPtr<TextureCompressionSettings> NewValue, ESelectInfo::Type SelectInfo)

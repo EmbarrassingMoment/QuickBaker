@@ -12,13 +12,19 @@ enum class EQuickBakerOutputType : uint8
 	EXR
 };
 
+enum class EQuickBakerBitDepth : uint8
+{
+	Bit8,
+	Bit16
+};
+
 // Data Structure for Bake Settings
 struct QUICKBAKER_API FQuickBakerSettings
 {
 	TWeakObjectPtr<UMaterialInterface> SelectedMaterial;
 	EQuickBakerOutputType OutputType = EQuickBakerOutputType::Asset;
 	int32 Resolution = 1024;
-	FString BitDepth = TEXT("8-bit"); // Using String to match existing UI logic logic, or we could enum it. Existing logic uses FString check "8-bit"/"16-bit".
+	EQuickBakerBitDepth BitDepth = EQuickBakerBitDepth::Bit16;
 	TextureCompressionSettings Compression = TC_Default;
 	FString OutputName;
 	FString OutputPath;
