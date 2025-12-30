@@ -2,6 +2,7 @@
 
 #include "QuickBaker.h"
 #include "QuickBakerUtils.h"
+#include "Editor.h"
 #include "ToolMenus.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Layout/SBox.h"
@@ -680,9 +681,20 @@ void FQuickBakerModule::ExecuteBake()
 	};
 
 	// 3. Bake Material
-	UObject* WorldContextObject = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-	UKismetRenderingLibrary::ClearRenderTarget2D(WorldContextObject, RenderTarget, FLinearColor::Black);
-	UKismetRenderingLibrary::DrawMaterialToRenderTarget(WorldContextObject, RenderTarget, SelectedMaterial.Get());
+	UWorld* World = nullptr;
+	if (GEditor)
+	{
+		World = GEditor->GetEditorWorldContext().World();
+	}
+
+	if (!World)
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoWorld", "No valid editor world found."));
+		return;
+	}
+
+	UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
+	UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, SelectedMaterial.Get());
 
 	if (bIsAsset)
 	{
