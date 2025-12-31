@@ -38,6 +38,16 @@ void FQuickBakerModule::PluginButtonClicked()
 	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
 }
 
+void FQuickBakerModule::OpenQuickBakerWithMaterial(UMaterialInterface* Material)
+{
+	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
+
+	if (PluginWidget.IsValid())
+	{
+		PluginWidget.Pin()->SetSelectedMaterial(Material);
+	}
+}
+
 void FQuickBakerModule::RegisterMenus()
 {
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
@@ -62,10 +72,13 @@ void FQuickBakerModule::RegisterMenus()
 
 TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
+	TSharedRef<SQuickBakerWidget> Widget = SNew(SQuickBakerWidget);
+	PluginWidget = Widget;
+
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
-			SNew(SQuickBakerWidget)
+			Widget
 		];
 }
 

@@ -17,6 +17,9 @@ public:
 	void Construct(const FArguments& InArgs);
 	virtual ~SQuickBakerWidget();
 
+	// External Control
+	void SetSelectedMaterial(class UMaterialInterface* Material);
+
 private:
 	// Settings Data
 	FQuickBakerSettings Settings;
