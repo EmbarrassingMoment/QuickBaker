@@ -42,7 +42,7 @@ public class QuickBaker : ModuleRules
 				"Projects",
 				"ToolMenus",
 				"PropertyEditor",
-				"EditorStyle",
+				// "EditorStyle", // Removed: Deprecated in UE5.5
 				"UnrealEd",
 				"AssetTools",
 				"AssetRegistry",
