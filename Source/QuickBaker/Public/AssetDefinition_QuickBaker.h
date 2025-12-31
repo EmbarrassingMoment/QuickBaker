@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AssetDefinitionDefault.h"
+#include "AssetDefinition.h"
 #include "Materials/MaterialInterface.h"
 #include "AssetDefinition_QuickBaker.generated.h"
 
