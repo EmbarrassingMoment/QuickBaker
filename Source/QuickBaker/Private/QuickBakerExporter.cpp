@@ -4,6 +4,7 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "RenderingThread.h"
 
 DEFINE_LOG_CATEGORY(LogQuickBaker);
 
@@ -16,6 +17,9 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: RenderTarget is null."));
 		return false;
 	}
+
+	// Ensure all rendering commands are completed before reading pixels
+	FlushRenderingCommands();
 
 	FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	if (!RTResource)
