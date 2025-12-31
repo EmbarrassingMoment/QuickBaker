@@ -37,6 +37,10 @@ private:
 	TSharedPtr<FAssetThumbnailPool> ThumbnailPool;
 	TSharedPtr<FAssetThumbnail> MaterialThumbnail;
 
+	// Warning UI
+	bool bShowMaterialWarning;
+	TSharedPtr<STextBlock> WarningTextBlock;
+
 	// Initialization
 	void InitializeOptions();
 

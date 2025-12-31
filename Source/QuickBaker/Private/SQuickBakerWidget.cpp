@@ -21,6 +21,7 @@
 
 void SQuickBakerWidget::Construct(const FArguments& InArgs)
 {
+	bShowMaterialWarning = false;
 	ThumbnailPool = MakeShareable(new FAssetThumbnailPool(24));
 	InitializeOptions();
 
@@ -77,6 +78,18 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			.Text(LOCTEXT("MaterialHint", "Tip: Use Unlit materials or ensure Emissive (Final Color) is connected."))
 			.ColorAndOpacity(FLinearColor(1.0f, 0.8f, 0.0f)) // Yellow
 			.Font(FCoreStyle::GetDefaultFontStyle("Italic", 8))
+		]
+
+		// Warning Text
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(5, 0, 5, 5)
+		[
+			SAssignNew(WarningTextBlock, STextBlock)
+			.Text(LOCTEXT("MaterialWarning", "⚠️ This material is not Unlit. Ensure Emissive (Final Color) is connected."))
+			.ColorAndOpacity(FLinearColor(1.0f, 0.5f, 0.0f)) // Orange
+			.Font(FCoreStyle::GetDefaultFontStyle("Bold", 9))
+			.Visibility(EVisibility::Collapsed)
 		]
 
 		// 2. Output Type
@@ -418,6 +431,7 @@ void SQuickBakerWidget::OnMaterialChanged(const FAssetData& AssetData)
 		MaterialThumbnail->SetAsset(AssetData);
 	}
 
+	bShowMaterialWarning = false;
 	if (Settings.SelectedMaterial.IsValid())
 	{
 		// Shading Model Check
@@ -425,6 +439,7 @@ void SQuickBakerWidget::OnMaterialChanged(const FAssetData& AssetData)
 
 		if (!ShadingModels.HasShadingModel(MSM_Unlit))
 		{
+			bShowMaterialWarning = true;
 			// Log warning if not Unlit
 			UE_LOG(LogTemp, Warning,
 				TEXT("QuickBaker: Selected material '%s' is not Unlit. "
@@ -435,6 +450,11 @@ void SQuickBakerWidget::OnMaterialChanged(const FAssetData& AssetData)
 
 		FString Name = FQuickBakerUtils::GetTextureNameFromMaterial(Settings.SelectedMaterial->GetName());
 		Settings.OutputName = Name;
+	}
+
+	if (WarningTextBlock.IsValid())
+	{
+		WarningTextBlock->SetVisibility(bShowMaterialWarning ? EVisibility::Visible : EVisibility::Collapsed);
 	}
 }
 
