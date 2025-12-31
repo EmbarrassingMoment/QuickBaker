@@ -11,6 +11,7 @@
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 #include "Misc/PackageName.h"
+#include "RenderingThread.h"
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
 
@@ -89,6 +90,9 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 	UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
 	UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Settings.SelectedMaterial.Get());
+
+	// Ensure all rendering commands are completed before reading pixels
+	FlushRenderingCommands();
 
 	// Phase 3: Save
 	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving Asset..."));
