@@ -49,6 +49,7 @@ public class QuickBaker : ModuleRules
 				"ContentBrowser",
 				"DesktopPlatform",
 				"ImageWrapper",
+				"RenderCore",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
