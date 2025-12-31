@@ -26,7 +26,7 @@ QuickBaker streamlines the process of converting dynamic materials into static t
 ## Features
 - **Multi-Format Support**:
   - **Texture Asset**: Save directly to the Content Browser.
-  - **PNG**: Export to disk (8-bit fixed, Alpha forced to Opaque).
+  - **PNG**: Export to disk (8-bit fixed, preserves alpha channel).
   - **EXR**: Export to disk (16-bit float fixed, Linear), ideal for high-precision data like height maps.
 - **Smart UI**:
   - **Thumbnail Preview**: Instantly see a 64x64 preview of your selected material.
@@ -64,6 +64,14 @@ QuickBaker streamlines the process of converting dynamic materials into static t
 - Unreal Engine 5.5 or later.
 
 ## FAQ
+
+### Q: Does PNG export preserve alpha/transparency?
+**A:** Yes. PNG exports preserve the alpha channel from your material's Emissive Color output. If your material outputs transparency information (e.g., through the Opacity pin connected to Emissive), it will be preserved in the PNG file.
+
+**Tips:**
+- To bake transparency: Connect your opacity/mask output to the Emissive Color's Alpha channel.
+- PNG supports full 8-bit alpha (0-255), allowing smooth transparency gradients.
+- If you need higher precision alpha, use EXR export instead (16-bit float).
 
 ### Q: The baked texture is completely black. What's wrong?
 **A:** QuickBaker captures the **Final Color (Emissive)** output of materials. If your material doesn't have anything connected to the Emissive Color pin, the output will be black.

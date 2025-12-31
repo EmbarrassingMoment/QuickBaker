@@ -40,11 +40,8 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		TArray<FColor> Bitmap;
 		RTResource->ReadPixels(Bitmap, ReadPixelFlags);
 
-		// Force Alpha to 255 (Opaque)
-		for (FColor& Pixel : Bitmap)
-		{
-			Pixel.A = 255;
-		}
+		// PNG exports preserve alpha channel from the material
+		// (アルファチャンネルはマテリアルから保持されます)
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
