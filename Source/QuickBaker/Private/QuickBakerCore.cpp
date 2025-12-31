@@ -49,7 +49,13 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	}
 
 	// Setup Render Target
-	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
+	// [MODIFIED]
+	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
+		GetTransientPackage(),
+		NAME_None,
+		RF_Transient
+	);
+
 	if (!RenderTarget)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
@@ -63,30 +69,15 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
 
-	// GC Protection
-	RenderTarget->AddToRoot();
-
-	// Ensure cleanup at end of scope
-	ON_SCOPE_EXIT
-	{
-		if (RenderTarget)
-		{
-			RenderTarget->RemoveFromRoot();
-			RenderTarget->MarkAsGarbage();
-		}
-	};
+	// [MODIFIED]
+	// Transient Package を Outer として使用することで、GC が自動管理
+	// RF_Transient フラグにより AddToRoot()/RemoveFromRoot() は不要
 
 	// Phase 2: Material Rendering
 	Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
 	if (Task.ShouldCancel())
 	{
-		// Explicit cleanup
-		if (RenderTarget)
-		{
-			RenderTarget->RemoveFromRoot();
-			RenderTarget->MarkAsGarbage();
-			RenderTarget = nullptr;
-		}
+		// [MODIFIED]
 		return;
 	}
 
@@ -113,13 +104,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
 	if (Task.ShouldCancel())
 	{
-		// Explicit cleanup
-		if (RenderTarget)
-		{
-			RenderTarget->RemoveFromRoot();
-			RenderTarget->MarkAsGarbage();
-			RenderTarget = nullptr;
-		}
+		// [MODIFIED]
 		return;
 	}
 
