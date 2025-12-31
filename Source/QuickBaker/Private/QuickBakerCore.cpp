@@ -18,11 +18,15 @@
 void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 {
 	// Initialize progress display (3 phases)
-	FScopedSlowTask Task(3.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
-	Task.MakeDialog();
+	FScopedSlowTask Task(4.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
+	Task.MakeDialog(true);
 
 	// Phase 1: Render Target Setup
 	Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
+	if (Task.ShouldCancel())
+	{
+		return;
+	}
 
 	const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
 	const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
@@ -73,7 +77,18 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	};
 
 	// Phase 2: Material Rendering
-	Task.EnterProgressFrame(1.0f, LOCTEXT("Rendering", "Rendering Material..."));
+	Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
+	if (Task.ShouldCancel())
+	{
+		// Explicit cleanup
+		if (RenderTarget)
+		{
+			RenderTarget->RemoveFromRoot();
+			RenderTarget->MarkAsGarbage();
+			RenderTarget = nullptr;
+		}
+		return;
+	}
 
 	UWorld* World = nullptr;
 	if (GEditor)
@@ -95,7 +110,18 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	FlushRenderingCommands();
 
 	// Phase 3: Save
-	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving Asset..."));
+	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
+	if (Task.ShouldCancel())
+	{
+		// Explicit cleanup
+		if (RenderTarget)
+		{
+			RenderTarget->RemoveFromRoot();
+			RenderTarget->MarkAsGarbage();
+			RenderTarget = nullptr;
+		}
+		return;
+	}
 
 	if (bIsAsset)
 	{
