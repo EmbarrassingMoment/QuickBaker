@@ -16,9 +16,15 @@ public:
 	/** This function will be bound to Command (by default it will bring up plugin window) */
 	void PluginButtonClicked();
 
+	/** Opens the Quick Baker window and selects the specified material */
+	void OpenQuickBakerWithMaterial(class UMaterialInterface* Material);
+
 private:
 
 	void RegisterMenus();
 
 	TSharedRef<class SDockTab> OnSpawnPluginTab(const class FSpawnTabArgs& SpawnTabArgs);
+
+	TWeakPtr<class SQuickBakerWidget> PluginWidget;
+	TWeakObjectPtr<class UMaterialInterface> TargetMaterialToLoad;
 };

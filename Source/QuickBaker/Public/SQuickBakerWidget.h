@@ -68,4 +68,7 @@ private:
 
 	FReply OnBakeClicked();
 	FReply OnBrowseClicked();
+
+public:
+	void SetInitialMaterial(class UMaterialInterface* Material);
 };

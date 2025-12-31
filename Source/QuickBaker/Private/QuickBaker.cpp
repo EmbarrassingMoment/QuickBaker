@@ -5,6 +5,9 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "ToolMenus.h"
+#include "ContentBrowserMenuContexts.h"
+#include "QuickBakerExporter.h" // For LogQuickBaker
+#include "Materials/MaterialInterface.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -58,14 +61,71 @@ void FQuickBakerModule::RegisterMenus()
 
 		Section.AddEntry(Entry);
 	}
+
+	// Register Material Context Menu
+	UToolMenu* AssetMenu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.MaterialInterface");
+	{
+		FToolMenuSection& Section = AssetMenu->FindOrAddSection("QuickBakerActions");
+		Section.Label = LOCTEXT("QuickBakerActionsLabel", "Quick Baker Actions");
+
+		FToolMenuEntry Entry = FToolMenuEntry::InitMenuEntry(
+			"QuickBakerContext",
+			LOCTEXT("QuickBakerContext", "Quick Baker"),
+			LOCTEXT("QuickBakerContextTooltip", "Open Quick Baker with this material selected"),
+			FSlateIcon(),
+			FToolMenuExecuteAction::CreateLambda([this](const FToolMenuContext& MenuContext)
+			{
+				if (const UContentBrowserAssetContextMenuContext* Context = MenuContext.FindContext<UContentBrowserAssetContextMenuContext>())
+				{
+					TArray<UMaterialInterface*> SelectedMaterials = Context->LoadSelectedObjects<UMaterialInterface>();
+					if (SelectedMaterials.Num() > 0)
+					{
+						OpenQuickBakerWithMaterial(SelectedMaterials[0]);
+					}
+				}
+			})
+		);
+		Section.AddEntry(Entry);
+	}
+}
+
+void FQuickBakerModule::OpenQuickBakerWithMaterial(UMaterialInterface* Material)
+{
+	if (Material)
+	{
+		UE_LOG(LogQuickBaker, Log, TEXT("Opening QuickBaker with material: %s"), *Material->GetName());
+
+		// Store the material to be used in OnSpawnPluginTab if the tab is not yet created
+		TargetMaterialToLoad = Material;
+
+		// Invoke the tab (this will call OnSpawnPluginTab if not open, or bring it to front if it is)
+		FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
+
+		// If the widget is already alive (tab was already open) and OnSpawnPluginTab didn't consume the target, update it directly
+		if (PluginWidget.IsValid() && TargetMaterialToLoad.IsValid())
+		{
+			PluginWidget.Pin()->SetInitialMaterial(Material);
+			TargetMaterialToLoad.Reset();
+		}
+	}
 }
 
 TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
+	TSharedRef<SQuickBakerWidget> NewWidget = SNew(SQuickBakerWidget);
+	PluginWidget = NewWidget;
+
+	// If we have a pending material (from OpenQuickBakerWithMaterial), set it now
+	if (TargetMaterialToLoad.IsValid())
+	{
+		NewWidget->SetInitialMaterial(TargetMaterialToLoad.Get());
+		TargetMaterialToLoad.Reset();
+	}
+
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
-			SNew(SQuickBakerWidget)
+			NewWidget
 		];
 }
 

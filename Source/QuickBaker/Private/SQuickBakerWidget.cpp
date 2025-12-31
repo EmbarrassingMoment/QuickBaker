@@ -624,4 +624,13 @@ FReply SQuickBakerWidget::OnBrowseClicked()
 	return FReply::Handled();
 }
 
+void SQuickBakerWidget::SetInitialMaterial(UMaterialInterface* Material)
+{
+	if (Material)
+	{
+		FAssetData AssetData(Material);
+		OnMaterialChanged(AssetData);
+	}
+}
+
 #undef LOCTEXT_NAMESPACE
