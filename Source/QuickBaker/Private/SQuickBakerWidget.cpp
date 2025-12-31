@@ -587,7 +587,8 @@ FReply SQuickBakerWidget::OnBrowseClicked()
 		if (IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get())
 		{
 			FString FolderName;
-			const void* ParentWindowWindowHandle = FSlateApplication::Get().FindBestParentWindowHandleForDialogs(nullptr);
+			TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().FindBestParentWindowForDialogs(nullptr);
+			const void* ParentWindowWindowHandle = (ParentWindow.IsValid()) ? ParentWindow->GetNativeWindow()->GetOSWindowHandle() : nullptr;
 
 			if (DesktopPlatform->OpenDirectoryDialog(
 				ParentWindowWindowHandle,
