@@ -71,4 +71,8 @@ TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& Sp
 
 #undef LOCTEXT_NAMESPACE
 	
+#ifndef UE_MODULE_NAME
+	#define UE_MODULE_NAME "QuickBaker"
+#endif
+
 IMPLEMENT_MODULE(FQuickBakerModule, QuickBaker)
