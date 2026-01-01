@@ -6,15 +6,19 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickBaker, Log, All);
 
+/**
+ * Helper class for exporting Render Targets to external files (PNG, EXR).
+ */
 class QUICKBAKER_API FQuickBakerExporter
 {
 public:
 	/**
-	 * Exports the RenderTarget to a file (PNG or EXR).
-	 * @param RenderTarget The Render Target to read from.
-	 * @param FullPath The full file path including extension.
-	 * @param bIsPNG True if exporting to PNG (8-bit), False for EXR (16-bit float).
-	 * @return True if successful.
+	 * Exports the content of a RenderTarget to a file on disk (PNG or EXR).
+	 *
+	 * @param RenderTarget The source Render Target to read pixels from.
+	 * @param FullPath The full file system path where the file should be saved, including the extension.
+	 * @param bIsPNG Set to true to export as PNG (8-bit, BGRA). Set to false to export as EXR (16-bit float, RGBA).
+	 * @return True if the file was successfully saved, false otherwise.
 	 */
 	static bool ExportToFile(UTextureRenderTarget2D* RenderTarget, const FString& FullPath, bool bIsPNG);
 };

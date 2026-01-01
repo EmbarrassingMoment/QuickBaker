@@ -12,24 +12,24 @@ static const FName QuickBakerTabName("QuickBaker");
 
 void FQuickBakerModule::StartupModule()
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-
+	// Register the tab spawner for the editor window
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(QuickBakerTabName, FOnSpawnTab::CreateRaw(this, &FQuickBakerModule::OnSpawnPluginTab))
 		.SetDisplayName(LOCTEXT("QuickBakerTabTitle", "QuickBaker"))
 		.SetMenuType(ETabSpawnerMenuType::Hidden);
 
+	// Register startup callbacks for menu extension
 	UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FQuickBakerModule::RegisterMenus));
 }
 
 void FQuickBakerModule::ShutdownModule()
 {
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
-
+	// Clean up menu callbacks
 	UToolMenus::UnRegisterStartupCallback(this);
 
+	// Unregister menu extensions
 	UToolMenus::UnregisterOwner(this);
 
+	// Unregister the tab spawner
 	FGlobalTabmanager::Get()->UnregisterNomadTabSpawner(QuickBakerTabName);
 }
 
