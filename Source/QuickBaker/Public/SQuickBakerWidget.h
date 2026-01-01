@@ -44,6 +44,9 @@ private:
 	// Initialization
 	void InitializeOptions();
 
+	/** Load saved settings from EditorPerProjectUserSettings.ini */
+	void LoadSavedSettings();
+
 	// UI Callbacks
 	void OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> NewValue, ESelectInfo::Type SelectInfo);
 	TSharedRef<SWidget> GenerateOutputTypeWidget(TSharedPtr<EQuickBakerOutputType> InOption);
