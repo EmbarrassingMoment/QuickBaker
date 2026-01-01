@@ -1,0 +1,179 @@
+# QuickBaker Plugin - English Localization
+# Copyright Epic Games, Inc. All Rights Reserved.
+
+msgid ""
+msgstr ""
+"Project-Id-Version: QuickBaker\n"
+"POT-Creation-Date: 2025-01-01 00:00+0000\n"
+"PO-Revision-Date: 2025-01-01 00:00+0000\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Module
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerTabTitle"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerLabel"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerCommand"
+msgstr "Quick Baker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerTooltip"
+msgstr "Opens the Quick Baker window"
+
+# Core
+msgctxt "FQuickBakerCore"
+msgid "BakingTexture"
+msgstr "Baking Texture..."
+
+msgctxt "FQuickBakerCore"
+msgid "SetupRT"
+msgstr "Setting up Render Target..."
+
+msgctxt "FQuickBakerCore"
+msgid "Rendering"
+msgstr "Rendering Material..."
+
+msgctxt "FQuickBakerCore"
+msgid "Saving"
+msgstr "Saving..."
+
+msgctxt "FQuickBakerCore"
+msgid "Error_RTCreate"
+msgstr "Failed to create render target."
+
+msgctxt "FQuickBakerCore"
+msgid "Error_NoWorld"
+msgstr "No valid editor world found."
+
+msgctxt "FQuickBakerCore"
+msgid "Success_Export"
+msgstr "Saved to {0}"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_SaveFile"
+msgstr "Failed to save file to disk or convert image."
+
+msgctxt "FQuickBakerCore"
+msgid "Error_MakeDirectory"
+msgstr "Failed to create output directory."
+
+msgctxt "FQuickBakerCore"
+msgid "BakeTextureTransaction"
+msgstr "Bake Texture"
+
+msgctxt "FQuickBakerCore"
+msgid "Success_Bake"
+msgstr "Texture baked successfully!"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_BakeFailed"
+msgstr "Failed to create texture from render target."
+
+# Widget
+msgctxt "SQuickBakerWidget"
+msgid "Label_Material"
+msgstr "Material"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Material"
+msgstr "Select the Material or Material Instance to bake. The 'Final Color' (Emissive) will be captured."
+
+msgctxt "SQuickBakerWidget"
+msgid "MaterialHint"
+msgstr "Tip: Use Unlit materials or ensure Emissive (Final Color) is connected."
+
+msgctxt "SQuickBakerWidget"
+msgid "MaterialWarning"
+msgstr "⚠️ This material is not Unlit. Ensure Emissive (Final Color) is connected."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputType"
+msgstr "Output Type"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputType"
+msgstr "Select the output format: Asset, PNG, or EXR."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_Resolution"
+msgstr "Resolution"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Resolution"
+msgstr "Set the width and height of the output texture. Higher values provide more detail but use more memory."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_BitDepth"
+msgstr "Bit Depth"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_BitDepth"
+msgstr "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_Compression"
+msgstr "Compression"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Compression"
+msgstr "Select the compression format for the resulting texture. TC_Default is standard for most cases."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputName"
+msgstr "Output Name"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputName"
+msgstr "The name of the generated Texture asset. Automatically prefixed with T_ based on naming conventions."
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputPath"
+msgstr "Output Path"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputPath"
+msgstr "The destination folder in the Content Browser or on disk."
+
+msgctxt "SQuickBakerWidget"
+msgid "Browse"
+msgstr "Browse"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Browse"
+msgstr "Open the Asset Picker or Folder Dialog to select a destination folder."
+
+msgctxt "SQuickBakerWidget"
+msgid "BakeTexture"
+msgstr "Bake Texture"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Bake"
+msgstr "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File."
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_NoMaterial"
+msgstr "Please select a material to bake."
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_InvalidSettings"
+msgstr "Invalid bake settings."
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_NoName"
+msgstr "Please specify an output name."
+
+msgctxt "SQuickBakerWidget"
+msgid "SaveTextureDialog"
+msgstr "Save Texture"
+
+msgctxt "SQuickBakerWidget"
+msgid "SelectFolder"
+msgstr "Select Output Folder"
