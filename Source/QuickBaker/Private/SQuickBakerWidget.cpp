@@ -1,4 +1,5 @@
 #include "SQuickBakerWidget.h"
+#include "QuickBakerEditorSettings.h"
 #include "QuickBakerCore.h"
 #include "QuickBakerUtils.h"
 #include "Widgets/Layout/SBox.h"
@@ -339,6 +340,71 @@ void SQuickBakerWidget::InitializeOptions()
 	}
 
 	Settings.OutputPath = TEXT("/Game/Textures");
+
+	// Load saved settings
+	LoadSavedSettings();
+}
+
+void SQuickBakerWidget::LoadSavedSettings()
+{
+	UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+	if (!EditorSettings)
+	{
+		return;
+	}
+
+	// Restore Resolution
+	for (const auto& Option : ResolutionOptions)
+	{
+		if (*Option == EditorSettings->LastUsedResolution)
+		{
+			SelectedResolution = Option;
+			Settings.Resolution = *SelectedResolution;
+			break;
+		}
+	}
+
+	// Restore Output Type
+	EQuickBakerOutputType SavedOutputType = static_cast<EQuickBakerOutputType>(EditorSettings->LastUsedOutputType);
+	for (const auto& Option : OutputTypeOptions)
+	{
+		if (*Option == SavedOutputType)
+		{
+			SelectedOutputType = Option;
+			Settings.OutputType = *SelectedOutputType;
+			break;
+		}
+	}
+
+	// Restore Bit Depth
+	EQuickBakerBitDepth SavedBitDepth = static_cast<EQuickBakerBitDepth>(EditorSettings->LastUsedBitDepth);
+	for (const auto& Option : BitDepthOptions)
+	{
+		if (*Option == SavedBitDepth)
+		{
+			SelectedBitDepth = Option;
+			Settings.BitDepth = *SelectedBitDepth;
+			break;
+		}
+	}
+
+	// Restore Compression
+	TextureCompressionSettings SavedCompression = static_cast<TextureCompressionSettings>(EditorSettings->LastUsedCompression);
+	for (const auto& Option : CompressionOptions)
+	{
+		if (*Option == SavedCompression)
+		{
+			SelectedCompression = Option;
+			Settings.Compression = *SelectedCompression;
+			break;
+		}
+	}
+
+	// Restore Output Path
+	if (!EditorSettings->LastUsedOutputPath.IsEmpty())
+	{
+		Settings.OutputPath = EditorSettings->LastUsedOutputPath;
+	}
 }
 
 void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> NewValue, ESelectInfo::Type SelectInfo)
@@ -380,6 +446,16 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 			}
 		}
 		Settings.BitDepth = *SelectedBitDepth;
+
+		// Save to config
+		UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+		if (EditorSettings)
+		{
+			EditorSettings->LastUsedOutputType = static_cast<uint8>(Settings.OutputType);
+			EditorSettings->LastUsedBitDepth = static_cast<uint8>(Settings.BitDepth);
+			EditorSettings->LastUsedOutputPath = Settings.OutputPath;
+			EditorSettings->SaveConfig();
+		}
 	}
 }
 
@@ -469,6 +545,14 @@ void SQuickBakerWidget::OnResolutionChanged(TSharedPtr<int32> NewValue, ESelectI
 	{
 		SelectedResolution = NewValue;
 		Settings.Resolution = *SelectedResolution;
+
+		// Save to config
+		UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+		if (EditorSettings)
+		{
+			EditorSettings->LastUsedResolution = Settings.Resolution;
+			EditorSettings->SaveConfig();
+		}
 	}
 }
 
@@ -488,6 +572,14 @@ void SQuickBakerWidget::OnBitDepthChanged(TSharedPtr<EQuickBakerBitDepth> NewVal
 	{
 		SelectedBitDepth = NewValue;
 		Settings.BitDepth = *SelectedBitDepth;
+
+		// Save to config
+		UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+		if (EditorSettings)
+		{
+			EditorSettings->LastUsedBitDepth = static_cast<uint8>(Settings.BitDepth);
+			EditorSettings->SaveConfig();
+		}
 	}
 }
 
@@ -517,6 +609,14 @@ void SQuickBakerWidget::OnCompressionChanged(TSharedPtr<TextureCompressionSettin
 	{
 		SelectedCompression = NewValue;
 		Settings.Compression = *SelectedCompression;
+
+		// Save to config
+		UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+		if (EditorSettings)
+		{
+			EditorSettings->LastUsedCompression = static_cast<uint8>(Settings.Compression);
+			EditorSettings->SaveConfig();
+		}
 	}
 }
 
@@ -619,6 +719,14 @@ FReply SQuickBakerWidget::OnBrowseClicked()
 				Settings.OutputPath = FolderName;
 			}
 		}
+	}
+
+	// Save Output Path
+	UQuickBakerEditorSettings* EditorSettings = GetMutableDefault<UQuickBakerEditorSettings>();
+	if (EditorSettings)
+	{
+		EditorSettings->LastUsedOutputPath = Settings.OutputPath;
+		EditorSettings->SaveConfig();
 	}
 
 	return FReply::Handled();
