@@ -69,7 +69,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// Hint Text
+		// 2. Hint Text
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5, 0, 5, 5)
@@ -80,7 +80,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			.Font(FCoreStyle::GetDefaultFontStyle("Italic", 8))
 		]
 
-		// Warning Text
+		// 3. Warning Text
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5, 0, 5, 5)
@@ -92,7 +92,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			.Visibility(EVisibility::Collapsed)
 		]
 
-		// 2. Output Type
+		// 4. Output Type
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -120,7 +120,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 3. Resolution
+		// 5. Resolution
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -148,7 +148,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 4. Bit Depth
+		// 6. Bit Depth
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -177,7 +177,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 5. Compression
+		// 7. Compression
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -205,7 +205,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 6. Output Name
+		// 8. Output Name
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -228,7 +228,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 7. Output Path
+		// 9. Output Path
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
@@ -265,7 +265,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 8. Bake Button
+		// 10. Bake Button
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)

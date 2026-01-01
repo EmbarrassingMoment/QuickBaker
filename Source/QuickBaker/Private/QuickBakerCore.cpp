@@ -49,7 +49,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	}
 
 	// Setup Render Target
-	// [MODIFIED]
+	// Create a transient render target.
 	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
 		GetTransientPackage(),
 		NAME_None,
@@ -69,15 +69,13 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
 
-	// [MODIFIED]
-	// Transient Package を Outer として使用することで、GC が自動管理
-	// RF_Transient フラグにより AddToRoot()/RemoveFromRoot() は不要
+	// Use the Transient Package as the Outer for automatic Garbage Collection management.
+	// The RF_Transient flag eliminates the need for manual AddToRoot()/RemoveFromRoot() calls.
 
 	// Phase 2: Material Rendering
 	Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
 	if (Task.ShouldCancel())
 	{
-		// [MODIFIED]
 		return;
 	}
 
@@ -104,7 +102,6 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
 	if (Task.ShouldCancel())
 	{
-		// [MODIFIED]
 		return;
 	}
 
