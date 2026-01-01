@@ -1,0 +1,179 @@
+# QuickBaker Plugin - Japanese Localization
+# Copyright Epic Games, Inc. All Rights Reserved.
+
+msgid ""
+msgstr ""
+"Project-Id-Version: QuickBaker\n"
+"POT-Creation-Date: 2025-01-01 00:00+0000\n"
+"PO-Revision-Date: 2025-01-01 00:00+0000\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Module
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerTabTitle"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerLabel"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerCommand"
+msgstr "Quick Baker"
+
+msgctxt "FQuickBakerModule"
+msgid "QuickBakerTooltip"
+msgstr "Quick Baker ウィンドウを開きます"
+
+# Core
+msgctxt "FQuickBakerCore"
+msgid "BakingTexture"
+msgstr "テクスチャをベイク中..."
+
+msgctxt "FQuickBakerCore"
+msgid "SetupRT"
+msgstr "レンダーターゲットをセットアップ中..."
+
+msgctxt "FQuickBakerCore"
+msgid "Rendering"
+msgstr "マテリアルをレンダリング中..."
+
+msgctxt "FQuickBakerCore"
+msgid "Saving"
+msgstr "保存中..."
+
+msgctxt "FQuickBakerCore"
+msgid "Error_RTCreate"
+msgstr "レンダーターゲットの作成に失敗しました。"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_NoWorld"
+msgstr "有効なエディタワールドが見つかりません。"
+
+msgctxt "FQuickBakerCore"
+msgid "Success_Export"
+msgstr "{0} に保存しました"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_SaveFile"
+msgstr "ファイルの保存または画像の変換に失敗しました。"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_MakeDirectory"
+msgstr "出力ディレクトリの作成に失敗しました。"
+
+msgctxt "FQuickBakerCore"
+msgid "BakeTextureTransaction"
+msgstr "テクスチャをベイク"
+
+msgctxt "FQuickBakerCore"
+msgid "Success_Bake"
+msgstr "テクスチャのベイクに成功しました！"
+
+msgctxt "FQuickBakerCore"
+msgid "Error_BakeFailed"
+msgstr "レンダーターゲットからテクスチャの作成に失敗しました。"
+
+# Widget
+msgctxt "SQuickBakerWidget"
+msgid "Label_Material"
+msgstr "マテリアル"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Material"
+msgstr "ベイクするマテリアルまたはマテリアルインスタンスを選択します。'ファイナルカラー'（エミッシブ）がキャプチャされます。"
+
+msgctxt "SQuickBakerWidget"
+msgid "MaterialHint"
+msgstr "ヒント：Unlitマテリアルを使用するか、エミッシブ（ファイナルカラー）が接続されていることを確認してください。"
+
+msgctxt "SQuickBakerWidget"
+msgid "MaterialWarning"
+msgstr "⚠️ このマテリアルはUnlitではありません。エミッシブ（ファイナルカラー）が接続されていることを確認してください。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputType"
+msgstr "出力タイプ"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputType"
+msgstr "出力形式を選択：アセット、PNG、またはEXR。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_Resolution"
+msgstr "解像度"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Resolution"
+msgstr "出力テクスチャの幅と高さを設定します。高い値ほど詳細になりますが、メモリを多く使用します。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_BitDepth"
+msgstr "ビット深度"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_BitDepth"
+msgstr "8ビットまたは16ビットを選択します。バンディングを避けるため、ノイズやSDFには16ビットを強く推奨します。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_Compression"
+msgstr "圧縮"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Compression"
+msgstr "生成されるテクスチャの圧縮形式を選択します。ほとんどの場合、TC_Defaultが標準です。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputName"
+msgstr "出力名"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputName"
+msgstr "生成されるテクスチャアセットの名前。命名規則に基づいてT_が自動的に接頭辞として追加されます。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Label_OutputPath"
+msgstr "出力パス"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_OutputPath"
+msgstr "コンテンツブラウザまたはディスク上の保存先フォルダ。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Browse"
+msgstr "参照"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Browse"
+msgstr "アセットピッカーまたはフォルダダイアログを開いて保存先フォルダを選択します。"
+
+msgctxt "SQuickBakerWidget"
+msgid "BakeTexture"
+msgstr "テクスチャをベイク"
+
+msgctxt "SQuickBakerWidget"
+msgid "Tooltip_Bake"
+msgstr "ベイクプロセスを開始します。マテリアルを一時的なレンダーターゲットにレンダリングし、静的テクスチャまたはファイルとして保存します。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_NoMaterial"
+msgstr "ベイクするマテリアルを選択してください。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_InvalidSettings"
+msgstr "無効なベイク設定です。"
+
+msgctxt "SQuickBakerWidget"
+msgid "Error_NoName"
+msgstr "出力名を指定してください。"
+
+msgctxt "SQuickBakerWidget"
+msgid "SaveTextureDialog"
+msgstr "テクスチャを保存"
+
+msgctxt "SQuickBakerWidget"
+msgid "SelectFolder"
+msgstr "出力フォルダを選択"
