@@ -17,6 +17,9 @@ public:
 	void Construct(const FArguments& InArgs);
 	virtual ~SQuickBakerWidget();
 
+	/** Public API to set the material programmatically (e.g. from Context Menu) */
+	void SetInitialMaterial(UMaterialInterface* Material);
+
 private:
 	// Settings Data
 	FQuickBakerSettings Settings;

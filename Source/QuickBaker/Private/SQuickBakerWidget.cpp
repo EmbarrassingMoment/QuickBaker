@@ -407,6 +407,15 @@ void SQuickBakerWidget::LoadSavedSettings()
 	}
 }
 
+void SQuickBakerWidget::SetInitialMaterial(UMaterialInterface* Material)
+{
+	if (Material)
+	{
+		FAssetData AssetData(Material);
+		OnMaterialChanged(AssetData);
+	}
+}
+
 void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> NewValue, ESelectInfo::Type SelectInfo)
 {
 	if (NewValue.IsValid())
