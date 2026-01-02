@@ -178,12 +178,16 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 7. Compression
+		// 7. Compression (Only visible for Asset output)
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
 		[
-			SNew(SHorizontalBox)
+			SAssignNew(CompressionRow, SHorizontalBox)
+			.Visibility_Lambda([this]() {
+				return (SelectedOutputType.IsValid() && *SelectedOutputType == EQuickBakerOutputType::Asset)
+					? EVisibility::Visible : EVisibility::Collapsed;
+			})
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
 			.VAlign(VAlign_Center)

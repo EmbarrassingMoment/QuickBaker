@@ -44,6 +44,9 @@ private:
 	bool bShowMaterialWarning;
 	TSharedPtr<STextBlock> WarningTextBlock;
 
+	// Reference to the Compression Row for dynamic visibility control
+	TSharedPtr<SHorizontalBox> CompressionRow;
+
 	// Initialization
 	void InitializeOptions();
 
