@@ -5,6 +5,7 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "ToolMenus.h"
+#include "ContentBrowserMenuContexts.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -38,13 +39,32 @@ void FQuickBakerModule::PluginButtonClicked()
 	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
 }
 
+void FQuickBakerModule::OpenQuickBakerWithMaterial(UMaterialInterface* Material)
+{
+	if (Material)
+	{
+		UE_LOG(LogQuickBaker, Log, TEXT("Opening QuickBaker with material: %s"), *Material->GetName());
+	}
+
+	ContextMenuMaterial = Material;
+	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
+
+	// If the widget is already alive (tab was already open), update it immediately
+	if (TSharedPtr<SQuickBakerWidget> Widget = QuickBakerWidget.Pin())
+	{
+		Widget->SetInitialMaterial(Material);
+		ContextMenuMaterial.Reset();
+	}
+}
+
 void FQuickBakerModule::RegisterMenus()
 {
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
 	FToolMenuOwnerScoped OwnerScoped(this);
 
-	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
+	// 1. Extend Tools Menu
 	{
+		UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("MainFrame.MainMenu.Tools");
 		FToolMenuSection& Section = Menu->FindOrAddSection("QuickBaker");
 		Section.Label = LOCTEXT("QuickBakerLabel", "QuickBaker");
 
@@ -58,14 +78,57 @@ void FQuickBakerModule::RegisterMenus()
 
 		Section.AddEntry(Entry);
 	}
+
+	// 2. Extend Material Context Menu
+	{
+		UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.MaterialInterface");
+		FToolMenuSection& Section = Menu->FindOrAddSection("QuickBaker");
+		Section.Label = LOCTEXT("QuickBakerContextLabel", "QuickBaker");
+
+		FToolMenuEntry Entry = FToolMenuEntry::InitMenuEntry(
+			"QuickBakerContext",
+			LOCTEXT("QuickBakerContextCommand", "Quick Baker"),
+			LOCTEXT("QuickBakerContextTooltip", "Open Quick Baker with this material"),
+			FSlateIcon(),
+			FToolMenuExecuteAction::CreateRaw(this, &FQuickBakerModule::OnContextMenuExecute)
+		);
+
+		Section.AddEntry(Entry);
+	}
+}
+
+void FQuickBakerModule::OnContextMenuExecute(const FToolMenuContext& Context)
+{
+	if (const UContentBrowserAssetContextMenuContext* AssetContext = Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	{
+		TArray<FAssetData> SelectedAssets = AssetContext->GetSelectedAssetsOfType(UMaterialInterface::StaticClass());
+		if (SelectedAssets.Num() > 0)
+		{
+			// Just take the first valid material
+			if (UMaterialInterface* Mat = Cast<UMaterialInterface>(SelectedAssets[0].GetAsset()))
+			{
+				UE_LOG(LogQuickBaker, Log, TEXT("Context menu executed on material: %s"), *Mat->GetName());
+				OpenQuickBakerWithMaterial(Mat);
+			}
+		}
+	}
 }
 
 TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
+	TSharedRef<SQuickBakerWidget> NewWidget = SNew(SQuickBakerWidget);
+	QuickBakerWidget = NewWidget;
+
+	if (ContextMenuMaterial.IsValid())
+	{
+		NewWidget->SetInitialMaterial(ContextMenuMaterial.Get());
+		ContextMenuMaterial.Reset();
+	}
+
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
-			SNew(SQuickBakerWidget)
+			NewWidget
 		];
 }
 
