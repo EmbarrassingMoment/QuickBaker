@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "QuickBaker.h"
+#include "QuickBakerExporter.h" // For LogQuickBaker
 #include "SQuickBakerWidget.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
