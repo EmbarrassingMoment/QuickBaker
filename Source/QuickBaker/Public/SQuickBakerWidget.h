@@ -17,6 +17,9 @@ public:
 	void Construct(const FArguments& InArgs);
 	virtual ~SQuickBakerWidget();
 
+	/** Sets the currently selected material programmatically */
+	void SetSelectedMaterial(UMaterialInterface* Material);
+
 private:
 	// Settings Data
 	FQuickBakerSettings Settings;

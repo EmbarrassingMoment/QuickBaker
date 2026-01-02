@@ -51,6 +51,7 @@ public class QuickBaker : ModuleRules
 				"ImageWrapper",
 				"RenderCore",
 				"Settings",
+				"AssetDefinition",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

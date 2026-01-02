@@ -289,6 +289,14 @@ SQuickBakerWidget::~SQuickBakerWidget()
 	}
 }
 
+void SQuickBakerWidget::SetSelectedMaterial(UMaterialInterface* Material)
+{
+	if (Material)
+	{
+		OnMaterialChanged(FAssetData(Material));
+	}
+}
+
 void SQuickBakerWidget::InitializeOptions()
 {
 	// Output Type

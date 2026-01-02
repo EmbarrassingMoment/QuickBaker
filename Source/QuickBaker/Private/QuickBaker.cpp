@@ -5,6 +5,7 @@
 #include "Widgets/Docking/SDockTab.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "ToolMenus.h"
+#include "Materials/MaterialInterface.h"
 
 static const FName QuickBakerTabName("QuickBaker");
 
@@ -38,6 +39,16 @@ void FQuickBakerModule::PluginButtonClicked()
 	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
 }
 
+void FQuickBakerModule::OpenQuickBakerWithMaterial(UMaterialInterface* Material)
+{
+	FGlobalTabmanager::Get()->TryInvokeTab(QuickBakerTabName);
+
+	if (TSharedPtr<SQuickBakerWidget> Widget = PluginWidget.Pin())
+	{
+		Widget->SetSelectedMaterial(Material);
+	}
+}
+
 void FQuickBakerModule::RegisterMenus()
 {
 	// Owner will be used for cleanup in call to UToolMenus::UnregisterOwner
@@ -62,10 +73,13 @@ void FQuickBakerModule::RegisterMenus()
 
 TSharedRef<SDockTab> FQuickBakerModule::OnSpawnPluginTab(const FSpawnTabArgs& SpawnTabArgs)
 {
+	TSharedRef<SQuickBakerWidget> NewWidget = SNew(SQuickBakerWidget);
+	PluginWidget = NewWidget;
+
 	return SNew(SDockTab)
 		.TabRole(ETabRole::NomadTab)
 		[
-			SNew(SQuickBakerWidget)
+			NewWidget
 		];
 }
 
