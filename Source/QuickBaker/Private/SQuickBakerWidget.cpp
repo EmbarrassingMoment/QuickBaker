@@ -37,14 +37,14 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.AutoWidth()
-			.VAlign(VAlign_Bottom)
-			.Padding(0, 0, 10, 4)
+			.VAlign(VAlign_Center)
+			.Padding(0, 0, 10, 0)
 			[
 				SNew(STextBlock).Text(LOCTEXT("Label_Material", "Material"))
 			]
 			+ SHorizontalBox::Slot()
 			.FillWidth(1.0f)
-			.VAlign(VAlign_Bottom)
+			.VAlign(VAlign_Center)
 			[
 				SNew(SObjectPropertyEntryBox)
 				.ToolTipText(LOCTEXT("Tooltip_Material", "Select the Material or Material Instance to bake. The 'Final Color' (Emissive) will be captured."))
@@ -54,19 +54,8 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 				.AllowClear(true)
 				.DisplayUseSelected(true)
 				.DisplayBrowse(true)
-				.DisplayThumbnail(false)
-			]
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
-			.VAlign(VAlign_Bottom)
-			.Padding(5, 0, 0, 0)
-			[
-				SNew(SBox)
-				.WidthOverride(64)
-				.HeightOverride(64)
-				[
-					(MaterialThumbnail = MakeShareable(new FAssetThumbnail(Settings.SelectedMaterial.Get(), 64, 64, ThumbnailPool)))->MakeThumbnailWidget()
-				]
+				.DisplayThumbnail(true)
+				.ThumbnailPool(ThumbnailPool)
 			]
 		]
 
