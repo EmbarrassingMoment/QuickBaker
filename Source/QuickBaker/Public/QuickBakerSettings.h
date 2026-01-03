@@ -11,7 +11,9 @@ enum class EQuickBakerOutputType : uint8
 {
 	Asset, /**< Create a Texture Asset in the Content Browser */
 	PNG,   /**< Export as a PNG file (8-bit) */
-	EXR    /**< Export as an EXR file (16-bit float) */
+	EXR,   /**< Export as an EXR file (16-bit float) */
+	TGA,   /**< Export as a TGA file (8-bit or 16-bit) */
+	TIFF   /**< Export as a TIFF file (8-bit or 16-bit float) */
 };
 
 /**

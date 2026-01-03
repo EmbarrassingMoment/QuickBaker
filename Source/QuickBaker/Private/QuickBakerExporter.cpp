@@ -10,7 +10,7 @@ DEFINE_LOG_CATEGORY(LogQuickBaker);
 
 #define LOCTEXT_NAMESPACE "FQuickBakerExporter"
 
-bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, const FString& FullPath, bool bIsPNG)
+bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, const FString& FullPath, EQuickBakerOutputType OutputType, EQuickBakerBitDepth BitDepth)
 {
 	if (!RenderTarget)
 	{
@@ -33,8 +33,9 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 
 	TArray<uint8> CompressedData;
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+	TSharedPtr<IImageWrapper> ImageWrapper;
 
-	if (bIsPNG)
+	if (OutputType == EQuickBakerOutputType::PNG)
 	{
 		// PNG Export (8-bit)
 		TArray<FColor> Bitmap;
@@ -46,17 +47,13 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 			Pixel.A = 255;
 		}
 
-		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+		ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
-		else
-		{
-			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: PNG Image compression failed for %s."), *FullPath);
-		}
 	}
-	else
+	else if (OutputType == EQuickBakerOutputType::EXR)
 	{
 		// EXR Export (16-bit float, Linear color space)
 		TArray<FLinearColor> LinearBitmap;
@@ -70,14 +67,80 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 			Bitmap.Add(FFloat16Color(Color));
 		}
 
-		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
+		ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
+	}
+	else if (OutputType == EQuickBakerOutputType::TGA)
+	{
+		ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::TGA);
+
+		if (BitDepth == EQuickBakerBitDepth::Bit16)
+		{
+			// TGA 16-bit
+			TArray<FLinearColor> LinearBitmap;
+			RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
+
+			TArray<FFloat16Color> Bitmap;
+			Bitmap.Reserve(LinearBitmap.Num());
+			for (const FLinearColor& Color : LinearBitmap)
+			{
+				Bitmap.Add(FFloat16Color(Color));
+			}
+
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
+			{
+				CompressedData = ImageWrapper->GetCompressed();
+			}
+		}
 		else
 		{
-			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: EXR Image compression failed for %s."), *FullPath);
+			// TGA 8-bit
+			TArray<FColor> Bitmap;
+			RTResource->ReadPixels(Bitmap, ReadPixelFlags);
+
+			// Preserve Alpha
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
+			{
+				CompressedData = ImageWrapper->GetCompressed();
+			}
+		}
+	}
+	else if (OutputType == EQuickBakerOutputType::TIFF)
+	{
+		ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::TIFF);
+
+		if (BitDepth == EQuickBakerBitDepth::Bit16)
+		{
+			// TIFF 16-bit
+			TArray<FLinearColor> LinearBitmap;
+			RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
+
+			TArray<FFloat16Color> Bitmap;
+			Bitmap.Reserve(LinearBitmap.Num());
+			for (const FLinearColor& Color : LinearBitmap)
+			{
+				Bitmap.Add(FFloat16Color(Color));
+			}
+
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
+			{
+				CompressedData = ImageWrapper->GetCompressed();
+			}
+		}
+		else
+		{
+			// TIFF 8-bit
+			TArray<FColor> Bitmap;
+			RTResource->ReadPixels(Bitmap, ReadPixelFlags);
+
+			// Preserve Alpha
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
+			{
+				CompressedData = ImageWrapper->GetCompressed();
+			}
 		}
 	}
 
@@ -92,6 +155,10 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		{
 			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not write file to %s"), *FullPath);
 		}
+	}
+	else
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Image compression failed for %s."), *FullPath);
 	}
 
 	return false;

@@ -30,6 +30,8 @@ QuickBaker streamlines the process of converting dynamic materials into static t
   - **Texture Asset**: Save directly to the Content Browser.
   - **PNG**: Export to disk (8-bit fixed, Alpha forced to Opaque).
   - **EXR**: Export to disk (16-bit float fixed, Linear), ideal for high-precision data like height maps.
+  - **TGA**: Export to disk (8-bit or 16-bit).
+  - **TIFF**: Export to disk (8-bit or 16-bit float).
 - **Smart UI**:
   - **Thumbnail Preview**: Instantly see a 64x64 preview of your selected material.
   - **Auto-Naming**: Automatically converts `M_` or `MI_` prefixes to `T_` (e.g., `M_Noise` becomes `T_Noise`).
@@ -52,10 +54,10 @@ QuickBaker streamlines the process of converting dynamic materials into static t
    - *Note: The tool captures the "Final Color" (Emissive) output of the material.*
 3. **Select Output Type**:
    - **Asset**: Saves a `.uasset` to your project.
-   - **PNG** or **EXR**: Saves an image file to your computer.
+   - **PNG**, **EXR**, **TGA**, or **TIFF**: Saves an image file to your computer.
 4. **Configure Settings**:
    - **Resolution**: Choose a size between 64x64 and 8192x8192.
-   - **Bit Depth**: Select 8-bit or 16-bit (locked for PNG/EXR). 16-bit is recommended for smooth gradients.
+   - **Bit Depth**: Select 8-bit or 16-bit (locked for PNG/EXR, adjustable for TGA/TIFF). 16-bit is recommended for smooth gradients.
    - **Compression**: Choose the texture compression (e.g., `TC_Normalmap` for normal maps).
 5. **Set Output Path**:
    - Click **Browse** to select the destination folder.

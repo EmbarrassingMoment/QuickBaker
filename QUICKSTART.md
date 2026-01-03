@@ -18,7 +18,7 @@ Select the **Material** or **Material Instance** you want to bake.
 
 **Step 3: Configure Settings**
 Adjust the settings based on your needs:
-* **Output Type**: Choose `Asset` to save within the project, or `PNG` / `EXR` to export to disk.
+* **Output Type**: Choose `Asset` to save within the project, or `PNG` / `EXR` / `TGA` / `TIFF` to export to disk.
 * **Resolution**: Select a resolution ranging from 64x64 up to 8192x8192.
 * **Bit Depth**: Use `8-bit` for standard textures. `16-bit` is recommended for high-precision data like SDFs or noise to avoid banding.
 

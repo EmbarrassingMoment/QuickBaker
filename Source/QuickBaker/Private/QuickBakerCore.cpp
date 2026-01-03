@@ -31,10 +31,12 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
 	const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
 	const bool bIsEXR = Settings.OutputType == EQuickBakerOutputType::EXR;
+	const bool bIsTGA = Settings.OutputType == EQuickBakerOutputType::TGA;
+	const bool bIsTIFF = Settings.OutputType == EQuickBakerOutputType::TIFF;
 
 	// Determine Format
 	ETextureRenderTargetFormat Format = RTF_RGBA16f;
-	if (bIsAsset)
+	if (bIsAsset || bIsTGA || bIsTIFF)
 	{
 		bool bIs16Bit = Settings.BitDepth == EQuickBakerBitDepth::Bit16;
 		Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
@@ -112,10 +114,15 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	else
 	{
 		// External Export
-		FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
+		FString Extension;
+		if (bIsPNG) Extension = TEXT(".png");
+		else if (bIsEXR) Extension = TEXT(".exr");
+		else if (bIsTGA) Extension = TEXT(".tga");
+		else if (bIsTIFF) Extension = TEXT(".tif");
+
 		FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
 
-		if (FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG))
+		if (FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, Settings.OutputType, Settings.BitDepth))
 		{
 			UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
 			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath)));

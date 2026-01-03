@@ -155,7 +155,12 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			.FillWidth(1.0f)
 			[
 				SNew(SComboBox<TSharedPtr<EQuickBakerBitDepth>>)
-				.IsEnabled_Lambda([this]() { return SelectedOutputType.IsValid() && *SelectedOutputType == EQuickBakerOutputType::Asset; })
+				.IsEnabled_Lambda([this]() {
+					if (!SelectedOutputType.IsValid()) return false;
+					return *SelectedOutputType == EQuickBakerOutputType::Asset ||
+						   *SelectedOutputType == EQuickBakerOutputType::TGA ||
+						   *SelectedOutputType == EQuickBakerOutputType::TIFF;
+				})
 				.ToolTipText(LOCTEXT("Tooltip_BitDepth", "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."))
 				.OptionsSource(&BitDepthOptions)
 				.InitiallySelectedItem(SelectedBitDepth)
@@ -288,6 +293,8 @@ void SQuickBakerWidget::InitializeOptions()
 	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::Asset));
 	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::PNG));
 	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::EXR));
+	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::TGA));
+	OutputTypeOptions.Add(MakeShared<EQuickBakerOutputType>(EQuickBakerOutputType::TIFF));
 	if (OutputTypeOptions.Num() > 0)
 	{
 		SelectedOutputType = OutputTypeOptions[0]; // Asset
@@ -425,6 +432,7 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 			Settings.OutputPath = FPaths::ProjectSavedDir();
 		}
 
+		// Handle bit depth locking
 		if (Settings.OutputType == EQuickBakerOutputType::PNG)
 		{
 			for (const auto& Option : BitDepthOptions)
@@ -447,6 +455,8 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 				}
 			}
 		}
+		// TGA and TIFF allow both, so no forced change unless needed (could restore user preference if desired, but keeping current selection is fine)
+
 		Settings.BitDepth = *SelectedBitDepth;
 
 		// Save to config
@@ -475,6 +485,12 @@ TSharedRef<SWidget> SQuickBakerWidget::GenerateOutputTypeWidget(TSharedPtr<EQuic
 	case EQuickBakerOutputType::EXR:
 		OutputTypeString = "EXR";
 		break;
+	case EQuickBakerOutputType::TGA:
+		OutputTypeString = "TGA";
+		break;
+	case EQuickBakerOutputType::TIFF:
+		OutputTypeString = "TIFF";
+		break;
 	}
 	return SNew(STextBlock).Text(FText::FromString(OutputTypeString));
 }
@@ -496,6 +512,12 @@ FText SQuickBakerWidget::GetSelectedOutputTypeText() const
 		break;
 	case EQuickBakerOutputType::EXR:
 		OutputTypeString = "EXR";
+		break;
+	case EQuickBakerOutputType::TGA:
+		OutputTypeString = "TGA";
+		break;
+	case EQuickBakerOutputType::TIFF:
+		OutputTypeString = "TIFF";
 		break;
 	}
 	return FText::FromString(OutputTypeString);
