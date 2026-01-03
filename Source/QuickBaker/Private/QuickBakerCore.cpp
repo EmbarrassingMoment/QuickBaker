@@ -1,3 +1,5 @@
+// Copyright Kurorekishi, All Rights Reserved.
+
 #include "QuickBakerCore.h"
 #include "QuickBakerExporter.h"
 #include "Engine/TextureRenderTarget2D.h"

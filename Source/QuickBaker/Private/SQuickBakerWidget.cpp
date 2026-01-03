@@ -1,3 +1,5 @@
+// Copyright Kurorekishi, All Rights Reserved.
+
 #include "SQuickBakerWidget.h"
 #include "QuickBakerEditorSettings.h"
 #include "QuickBakerCore.h"

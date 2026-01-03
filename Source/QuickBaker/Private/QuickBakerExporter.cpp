@@ -1,3 +1,5 @@
+// Copyright Kurorekishi, All Rights Reserved.
+
 #include "QuickBakerExporter.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"

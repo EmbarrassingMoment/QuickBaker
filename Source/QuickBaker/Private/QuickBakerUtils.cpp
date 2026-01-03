@@ -1,3 +1,5 @@
+// Copyright Kurorekishi, All Rights Reserved.
+
 #include "QuickBakerUtils.h"
 
 FString FQuickBakerUtils::GetTextureNameFromMaterial(const FString& MaterialName)
