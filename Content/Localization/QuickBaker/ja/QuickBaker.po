@@ -1,0 +1,195 @@
+﻿msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ja\n"
+
+# -----------------------------------------------------------------------------
+# Namespace: SQuickBakerWidget
+# File: Source/QuickBaker/Private/SQuickBakerWidget.cpp
+# -----------------------------------------------------------------------------
+
+msgctxt "SQuickBakerWidget,Label_Material"
+msgid "Material"
+msgstr "マテリアル"
+
+msgctxt "SQuickBakerWidget,Tooltip_Material"
+msgid "Select the Material or Material Instance to bake. The 'Final Color' (Emissive) will be captured."
+msgstr "ベイクするマテリアルまたはマテリアルインスタンスを選択します。「ファイナルカラー」（エミッシブ）がキャプチャされます。"
+
+msgctxt "SQuickBakerWidget,MaterialHint"
+msgid "Tip: Use Unlit materials or ensure Emissive (Final Color) is connected."
+msgstr "ヒント: Unlitマテリアルを使用するか、エミッシブ（ファイナルカラー）が接続されていることを確認してください。"
+
+msgctxt "SQuickBakerWidget,MaterialWarning"
+msgid "⚠️ This material is not Unlit. Ensure Emissive (Final Color) is connected."
+msgstr "⚠️ このマテリアルはUnlitではありません。エミッシブ（ファイナルカラー）が接続されていることを確認してください。"
+
+msgctxt "SQuickBakerWidget,Label_OutputType"
+msgid "Output Type"
+msgstr "出力タイプ"
+
+msgctxt "SQuickBakerWidget,Tooltip_OutputType"
+msgid "Select the output format: Asset, PNG, or EXR."
+msgstr "出力形式を選択します: アセット、PNG、またはEXR。"
+
+msgctxt "SQuickBakerWidget,Label_Resolution"
+msgid "Resolution"
+msgstr "解像度"
+
+msgctxt "SQuickBakerWidget,Tooltip_Resolution"
+msgid "Set the width and height of the output texture. Higher values provide more detail but use more memory."
+msgstr "出力テクスチャの幅と高さを設定します。値が高いほど詳細になりますが、メモリを多く使用します。"
+
+msgctxt "SQuickBakerWidget,Label_BitDepth"
+msgid "Bit Depth"
+msgstr "ビット深度"
+
+msgctxt "SQuickBakerWidget,Tooltip_BitDepth"
+msgid "Choose between 8-bit and 16-bit. 16-bit is highly recommended for Noise and SDF to avoid banding."
+msgstr "8bitと16bitのいずれかを選択します。バンディングを防ぐため、ノイズやSDFには16bitを強く推奨します。"
+
+msgctxt "SQuickBakerWidget,Label_Compression"
+msgid "Compression"
+msgstr "圧縮"
+
+msgctxt "SQuickBakerWidget,Tooltip_Compression"
+msgid "Select the compression format for the resulting texture. TC_Default is standard for most cases."
+msgstr "結果のテクスチャの圧縮形式を選択します。ほとんどの場合、TC_Defaultが標準的です。"
+
+msgctxt "SQuickBakerWidget,Label_OutputName"
+msgid "Output Name"
+msgstr "出力名"
+
+msgctxt "SQuickBakerWidget,Tooltip_OutputName"
+msgid "The name of the generated Texture asset. Automatically prefixed with T_ based on naming conventions."
+msgstr "生成されるテクスチャアセットの名前です。命名規則に基づいて自動的にT_という接頭辞が付きます。"
+
+msgctxt "SQuickBakerWidget,Label_OutputPath"
+msgid "Output Path"
+msgstr "出力パス"
+
+msgctxt "SQuickBakerWidget,Tooltip_OutputPath"
+msgid "The destination folder in the Content Browser or on disk."
+msgstr "コンテンツブラウザまたはディスク上の保存先フォルダです。"
+
+msgctxt "SQuickBakerWidget,Browse"
+msgid "Browse"
+msgstr "参照"
+
+msgctxt "SQuickBakerWidget,Tooltip_Browse"
+msgid "Open the Asset Picker or Folder Dialog to select a destination folder."
+msgstr "アセットピッカーまたはフォルダダイアログを開き、保存先フォルダを選択します。"
+
+msgctxt "SQuickBakerWidget,BakeTexture"
+msgid "Bake Texture"
+msgstr "テクスチャをベイク"
+
+msgctxt "SQuickBakerWidget,Tooltip_Bake"
+msgid "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File."
+msgstr "ベイク処理を開始します。マテリアルを一時的なレンダーターゲットにレンダリングし、静的テクスチャまたはファイルとして保存します。"
+
+msgctxt "SQuickBakerWidget,Error_NoMaterial"
+msgid "Please select a material to bake."
+msgstr "ベイクするマテリアルを選択してください。"
+
+msgctxt "SQuickBakerWidget,Error_InvalidSettings"
+msgid "Invalid bake settings."
+msgstr "ベイク設定が無効です。"
+
+msgctxt "SQuickBakerWidget,Error_NoName"
+msgid "Please specify an output name."
+msgstr "出力名を指定してください。"
+
+msgctxt "SQuickBakerWidget,SaveTextureDialog"
+msgid "Save Texture"
+msgstr "テクスチャを保存"
+
+msgctxt "SQuickBakerWidget,SelectFolder"
+msgid "Select Output Folder"
+msgstr "出力フォルダを選択"
+
+# -----------------------------------------------------------------------------
+# Namespace: FQuickBakerCore
+# File: Source/QuickBaker/Private/QuickBakerCore.cpp
+# -----------------------------------------------------------------------------
+
+msgctxt "FQuickBakerCore,BakingTexture"
+msgid "Baking Texture..."
+msgstr "テクスチャをベイク中..."
+
+msgctxt "FQuickBakerCore,SetupRT"
+msgid "Setting up Render Target..."
+msgstr "レンダーターゲットをセットアップ中..."
+
+msgctxt "FQuickBakerCore,Error_RTCreate"
+msgid "Failed to create render target."
+msgstr "レンダーターゲットの作成に失敗しました。"
+
+msgctxt "FQuickBakerCore,Rendering"
+msgid "Rendering Material..."
+msgstr "マテリアルをレンダリング中..."
+
+msgctxt "FQuickBakerCore,Error_NoWorld"
+msgid "No valid editor world found."
+msgstr "有効なエディタワールドが見つかりません。"
+
+msgctxt "FQuickBakerCore,Saving"
+msgid "Saving..."
+msgstr "保存中..."
+
+msgctxt "FQuickBakerCore,Success_Export"
+msgid "Saved to {0}"
+msgstr "{0} に保存しました"
+
+msgctxt "FQuickBakerCore,Error_SaveFile"
+msgid "Failed to save file to disk or convert image."
+msgstr "ディスクへのファイル保存または画像変換に失敗しました。"
+
+msgctxt "FQuickBakerCore,Error_MakeDirectory"
+msgid "Failed to create output directory."
+msgstr "出力ディレクトリの作成に失敗しました。"
+
+msgctxt "FQuickBakerCore,BakeTextureTransaction"
+msgid "Bake Texture"
+msgstr "テクスチャをベイク"
+
+msgctxt "FQuickBakerCore,Success_Bake"
+msgid "Texture baked successfully!"
+msgstr "テクスチャのベイクに成功しました！"
+
+msgctxt "FQuickBakerCore,Error_BakeFailed"
+msgid "Failed to create texture from render target."
+msgstr "レンダーターゲットからのテクスチャ作成に失敗しました。"
+
+# -----------------------------------------------------------------------------
+# Namespace: FQuickBakerModule
+# File: Source/QuickBaker/Private/QuickBaker.cpp
+# -----------------------------------------------------------------------------
+
+msgctxt "FQuickBakerModule,QuickBakerTabTitle"
+msgid "QuickBaker"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule,QuickBakerLabel"
+msgid "QuickBaker"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule,QuickBakerCommand"
+msgid "Quick Baker"
+msgstr "Quick Baker"
+
+msgctxt "FQuickBakerModule,QuickBakerTooltip"
+msgid "Opens the Quick Baker window"
+msgstr "Quick Bakerウィンドウを開きます"
+
+msgctxt "FQuickBakerModule,QuickBakerContextLabel"
+msgid "QuickBaker"
+msgstr "QuickBaker"
+
+msgctxt "FQuickBakerModule,QuickBakerContextCommand"
+msgid "Quick Baker"
+msgstr "Quick Baker"
+
+msgctxt "FQuickBakerModule,QuickBakerContextTooltip"
+msgid "Open Quick Baker with this material"
+msgstr "このマテリアルでQuick Bakerを開きます"
