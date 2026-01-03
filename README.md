@@ -2,6 +2,8 @@
 
 QuickBaker is a simple and fast tool to bake Material expressions (Emissive/Final Color) into Static Textures for Unreal Engine 5.5+.
 
+> **First time? Check out the [Quick Start Guide](QUICKSTART.md) to get started in seconds!**
+
 ## Architecture
 
 The QuickBaker plugin is structured following the Single Responsibility Principle, ensuring maintainability and scalability.
