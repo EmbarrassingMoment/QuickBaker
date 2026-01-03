@@ -6,9 +6,6 @@
 このプロジェクトは [Semantic Versioning](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
 ## [Unreleased]
-### 追加
-- TGA エクスポートのサポート (8-bit および 16-bit)。
-- TIFF エクスポートのサポート (8-bit および 16-bit 浮動小数点)。
 
 ## [1.0.0] - 2026-01-01
 ### 追加
