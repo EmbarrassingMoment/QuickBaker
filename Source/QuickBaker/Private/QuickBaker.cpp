@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Kurorekishi, All Rights Reserved.
 
 #include "QuickBaker.h"
 #include "QuickBakerExporter.h" // For LogQuickBaker
