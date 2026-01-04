@@ -1,3 +1,5 @@
+![QuickStart](Docs/images/QuickStart.gif)
+
 # QuickBaker QuickStart Guide
 
 **QuickBaker** is a lightweight material baking tool for Unreal Engine 5.5+. It allows you to convert any material's "Emissive Color" (Final Color) output into a static Texture Asset (.uasset) or an image file (.png, .exr) with a single click. Ideally suited for baking noise patterns, Signed Distance Fields (SDF), and procedural textures.
