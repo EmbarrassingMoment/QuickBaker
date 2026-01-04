@@ -170,15 +170,6 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 
 	UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset: Creating texture at package: %s"), *FullPackageName);
 
-	// Check if asset already exists and handle overwrite
-	if (UPackage* ExistingPackage = FindPackage(nullptr, *FullPackageName))
-	{
-		if (UTexture2D* ExistingTexture = FindObject<UTexture2D>(ExistingPackage, *Settings.OutputName))
-		{
-			UE_LOG(LogQuickBaker, Warning, TEXT("BakeToAsset: Asset already exists, will be overwritten: %s"), *FullPackageName);
-		}
-	}
-
 	// Ensure physical directory exists
 	FString PackageFilename;
 	if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, PackageFilename, FPackageName::GetAssetPackageExtension()))
@@ -206,12 +197,20 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 
 	Package->FullyLoad();
 
-	// Create new Texture2D
-	UTexture2D* NewTexture = NewObject<UTexture2D>(
-		Package,
-		*Settings.OutputName,
-		RF_Public | RF_Standalone
-	);
+	// Check if asset already exists
+	UTexture2D* NewTexture = FindObject<UTexture2D>(Package, *Settings.OutputName);
+	if (NewTexture)
+	{
+		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset: Updating existing asset %s"), *FullPackageName);
+	}
+	else
+	{
+		NewTexture = NewObject<UTexture2D>(
+			Package,
+			*Settings.OutputName,
+			RF_Public | RF_Standalone
+		);
+	}
 
 	if (!NewTexture)
 	{
@@ -221,16 +220,16 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	}
 
 	// Determine pixel format based on bit depth
-	EPixelFormat PixelFormat = (Settings.BitDepth == EQuickBakerBitDepth::Bit16) ? PF_FloatRGBA : PF_B8G8R8A8;
+	bool bIs16Bit = (Settings.BitDepth == EQuickBakerBitDepth::Bit16);
+	ETextureSourceFormat SourceFormat = bIs16Bit ? TSF_RGBA16F : TSF_BGRA8;
 
 	// Initialize texture properties
-	NewTexture->Source.Init(Settings.Resolution, Settings.Resolution, 1, 1, TSF_BGRA8);
+	NewTexture->Source.Init(Settings.Resolution, Settings.Resolution, 1, 1, SourceFormat);
 	NewTexture->CompressionSettings = Settings.Compression;
 	NewTexture->SRGB = false;
 	NewTexture->MipGenSettings = TMGS_NoMipmaps;
 
 	// Read pixels from RenderTarget
-	TArray<FColor> SurfaceData;
 	FRenderTarget* RenderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
 	if (!RenderTargetResource)
 	{
@@ -239,27 +238,50 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		return;
 	}
 
-	// Read pixels
-	FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
-	ReadPixelFlags.SetLinearToGamma(false);
-	RenderTargetResource->ReadPixels(SurfaceData, ReadPixelFlags);
+	// Lock the texture mip for editing
+	uint8* MipData = NewTexture->Source.LockMip(0);
+	int64 TextureDataSize = 0;
+	bool bReadSuccess = false;
 
-	if (SurfaceData.Num() == 0)
+	if (bIs16Bit)
+	{
+		TArray<FFloat16Color> SurfaceData;
+		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
+		{
+			if (SurfaceData.Num() > 0)
+			{
+				TextureDataSize = SurfaceData.Num() * sizeof(FFloat16Color);
+				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
+				bReadSuccess = true;
+			}
+		}
+	}
+	else
+	{
+		TArray<FColor> SurfaceData;
+		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
+		ReadPixelFlags.SetLinearToGamma(false);
+
+		if (RenderTargetResource->ReadPixels(SurfaceData, ReadPixelFlags))
+		{
+			if (SurfaceData.Num() > 0)
+			{
+				TextureDataSize = SurfaceData.Num() * sizeof(FColor);
+				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
+				bReadSuccess = true;
+			}
+		}
+	}
+
+	// Unlock the mip
+	NewTexture->Source.UnlockMip(0);
+
+	if (!bReadSuccess)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoPixels", "Failed to read pixels from render target."));
 		return;
 	}
-
-	// Lock the texture mip for editing
-	uint8* MipData = NewTexture->Source.LockMip(0);
-
-	// Copy pixel data
-	const int32 TextureDataSize = Settings.Resolution * Settings.Resolution * 4; // 4 bytes per pixel (BGRA8)
-	FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
-
-	// Unlock the mip
-	NewTexture->Source.UnlockMip(0);
 
 	// Update texture
 	NewTexture->UpdateResource();
