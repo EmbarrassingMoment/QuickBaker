@@ -3,6 +3,7 @@
 #include "QuickBakerCore.h"
 #include "QuickBakerExporter.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Engine/Texture2D.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Misc/MessageDialog.h"
@@ -15,6 +16,7 @@
 #include "Misc/PackageName.h"
 #include "RenderingThread.h"
 #include "UObject/SavePackage.h"
+#include "TextureResource.h"
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
 
@@ -145,6 +147,14 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings)
 {
+	if (!RenderTarget)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: RenderTarget is null."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NullRT", "Render Target is null."));
+		return;
+	}
+
+	// Normalize package path
 	FString PackagePath = Settings.OutputPath;
 	if (!PackagePath.StartsWith(TEXT("/Game/")))
 	{
@@ -155,12 +165,25 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		PackagePath.LeftChopInline(1);
 	}
 
-	// Ensure directory exists
+	// Build full package name
 	FString FullPackageName = FPaths::Combine(PackagePath, Settings.OutputName);
-	FString AssetPackageFilename;
-	if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, AssetPackageFilename))
+
+	UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset: Creating texture at package: %s"), *FullPackageName);
+
+	// Check if asset already exists and handle overwrite
+	if (UPackage* ExistingPackage = FindPackage(nullptr, *FullPackageName))
 	{
-		FString PackageDirectory = FPaths::GetPath(AssetPackageFilename);
+		if (UTexture2D* ExistingTexture = FindObject<UTexture2D>(ExistingPackage, *Settings.OutputName))
+		{
+			UE_LOG(LogQuickBaker, Warning, TEXT("BakeToAsset: Asset already exists, will be overwritten: %s"), *FullPackageName);
+		}
+	}
+
+	// Ensure physical directory exists
+	FString PackageFilename;
+	if (FPackageName::TryConvertLongPackageNameToFilename(FullPackageName, PackageFilename, FPackageName::GetAssetPackageExtension()))
+	{
+		FString PackageDirectory = FPaths::GetPath(PackageFilename);
 		if (!IFileManager::Get().DirectoryExists(*PackageDirectory))
 		{
 			if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
@@ -172,53 +195,102 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		}
 	}
 
-	// Use transaction only when creating Asset
-	FScopedTransaction Transaction(LOCTEXT("BakeTextureTransaction", "Bake Texture"));
-
-	// Create Package
+	// Create package
 	UPackage* Package = CreatePackage(*FullPackageName);
-
-	UTexture2D* NewTexture = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, Settings.OutputName, Settings.Compression);
-
-	if (NewTexture)
+	if (!Package)
 	{
-		NewTexture->Rename(*Settings.OutputName, Package);
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create package: %s"), *FullPackageName);
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreatePackage", "Failed to create package."));
+		return;
+	}
 
-		// Texture Settings
-		NewTexture->CompressionSettings = Settings.Compression;
-		NewTexture->SRGB = false; // Requirement: sRGB = false
+	Package->FullyLoad();
 
-		// Save
-		NewTexture->MarkPackageDirty();
-		NewTexture->PostEditChange();
+	// Create new Texture2D
+	UTexture2D* NewTexture = NewObject<UTexture2D>(
+		Package,
+		*Settings.OutputName,
+		RF_Public | RF_Standalone
+	);
 
-		// Notify Asset Registry
-		FAssetRegistryModule::AssetCreated(NewTexture);
+	if (!NewTexture)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create UTexture2D object."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreateTexture", "Failed to create texture object."));
+		return;
+	}
 
-		FString PackageFileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+	// Determine pixel format based on bit depth
+	EPixelFormat PixelFormat = (Settings.BitDepth == EQuickBakerBitDepth::Bit16) ? PF_FloatRGBA : PF_B8G8R8A8;
 
-		FSavePackageArgs SaveArgs;
-		SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-		SaveArgs.SaveFlags = SAVE_NoError;
-		SaveArgs.Error = GError;
-		SaveArgs.bForceByteSwapping = true;
+	// Initialize texture properties
+	NewTexture->Source.Init(Settings.Resolution, Settings.Resolution, 1, 1, TSF_BGRA8);
+	NewTexture->CompressionSettings = Settings.Compression;
+	NewTexture->SRGB = false;
+	NewTexture->MipGenSettings = TMGS_NoMipmaps;
 
-		if (UPackage::SavePackage(Package, NewTexture, *PackageFileName, SaveArgs))
-		{
-			UE_LOG(LogQuickBaker, Log, TEXT("Successfully saved asset to: %s"), *PackageFileName);
-		}
-		else
-		{
-			UE_LOG(LogQuickBaker, Error, TEXT("Failed to save asset to: %s"), *PackageFileName);
-		}
+	// Read pixels from RenderTarget
+	TArray<FColor> SurfaceData;
+	FRenderTarget* RenderTargetResource = RenderTarget->GameThread_GetRenderTargetResource();
+	if (!RenderTargetResource)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Could not get render target resource."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_RTResource", "Failed to access render target resource."));
+		return;
+	}
 
-		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset success: Texture baked successfully at %s"), *FullPackageName);
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
+	// Read pixels
+	FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
+	ReadPixelFlags.SetLinearToGamma(false);
+	RenderTargetResource->ReadPixels(SurfaceData, ReadPixelFlags);
+
+	if (SurfaceData.Num() == 0)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoPixels", "Failed to read pixels from render target."));
+		return;
+	}
+
+	// Lock the texture mip for editing
+	uint8* MipData = NewTexture->Source.LockMip(0);
+
+	// Copy pixel data
+	const int32 TextureDataSize = Settings.Resolution * Settings.Resolution * 4; // 4 bytes per pixel (BGRA8)
+	FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
+
+	// Unlock the mip
+	NewTexture->Source.UnlockMip(0);
+
+	// Update texture
+	NewTexture->UpdateResource();
+
+	// Mark package as dirty
+	Package->MarkPackageDirty();
+
+	// Notify asset registry
+	FAssetRegistryModule::AssetCreated(NewTexture);
+
+	// Save package to disk
+	FString PackageFileName = FPackageName::LongPackageNameToFilename(FullPackageName, FPackageName::GetAssetPackageExtension());
+
+	FSavePackageArgs SaveArgs;
+	SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+	SaveArgs.SaveFlags = SAVE_NoError;
+	SaveArgs.Error = GError;
+
+	bool bSaved = UPackage::SavePackage(Package, NewTexture, *PackageFileName, SaveArgs);
+
+	if (bSaved)
+	{
+		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset success: Texture saved to %s"), *PackageFileName);
+		FMessageDialog::Open(EAppMsgType::Ok,
+			FText::Format(LOCTEXT("Success_Bake", "Texture baked successfully!\nSaved to: {0}"),
+				FText::FromString(FullPackageName)));
 	}
 	else
 	{
-		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create texture from render target at %s"), *FullPackageName);
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_BakeFailed", "Failed to create texture from render target."));
+		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to save package to %s"), *PackageFileName);
+		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_SavePackage", "Failed to save package to disk."));
 	}
 }
 
