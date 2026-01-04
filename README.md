@@ -4,6 +4,8 @@ QuickBaker is a simple and fast tool to bake Material expressions (Emissive/Fina
 
 > **First time? Check out the [Quick Start Guide](QUICKSTART.md) to get started in seconds!**
 
+![QuickBaker Architecture](Docs/images/window_en.jpg)
+
 ## Architecture
 
 The QuickBaker plugin is structured following the Single Responsibility Principle, ensuring maintainability and scalability.
