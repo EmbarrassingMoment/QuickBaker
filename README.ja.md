@@ -4,6 +4,8 @@ QuickBakerは、Unreal Engine 5.5以降向けのマテリアル表現（エミ�
 
 > **初めての方はこちら！ [クイックスタートガイド](QUICKSTART.ja.md) をご覧ください。**
 
+![QuickBaker Architecture](Docs/images/window_ja.jpg)
+
 ## アーキテクチャ
 
 QuickBakerプラグインは、単一責任の原則（SRP）に従って構成されており、保守性と拡張性を確保しています。
