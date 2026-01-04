@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Kurorekishi (EmbarrassingMoment). Licensed under MIT License.
+// Copyright (c) 2026 Kurorekishi (EmbarrassingMoment).
 
 #include "QuickBakerEditorSettings.h"
 
