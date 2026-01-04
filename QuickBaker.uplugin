@@ -8,7 +8,7 @@
 	"CreatedBy": "Kurorekishi",
 	"CreatedByURL": "https://github.com/EmbarrassingMoment",
 	"DocsURL": "https://github.com/EmbarrassingMoment/QuickBaker",
-	"MarketplaceURL": "",
+	"MarketplaceURL": "com.epicgames.launcher://ue/Fab/product/b5375488-9096-43cd-9983-e5fe1b1b6e9",
 	"SupportURL": "https://github.com/EmbarrassingMoment/QuickBaker/issues",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
@@ -18,7 +18,10 @@
 		{
 			"Name": "QuickBaker",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
 		}
 	],
 	"LocalizationTargets": [
