@@ -26,6 +26,7 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 {
 	bShowMaterialWarning = false;
 	ThumbnailPool = MakeShareable(new FAssetThumbnailPool(24));
+	MaterialThumbnail = MakeShareable(new FAssetThumbnail(FAssetData(), 64, 64, ThumbnailPool));
 	InitializeOptions();
 
 	ChildSlot
@@ -675,6 +676,37 @@ FReply SQuickBakerWidget::OnBakeClicked()
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoName", "Please specify an output name."));
 		return FReply::Handled();
+	}
+
+	// Validate OutputName
+	FString InvalidChars = TEXT("/\\:*?\"<>|");
+	for (int32 i = 0; i < InvalidChars.Len(); ++i)
+	{
+		FString Char = InvalidChars.Mid(i, 1);
+		if (Settings.OutputName.Contains(Char))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_InvalidName", "Output Name contains invalid character: {0}"), FText::FromString(Char)));
+			return FReply::Handled();
+		}
+	}
+
+	// Validate OutputPath
+	if (Settings.OutputType == EQuickBakerOutputType::Asset)
+	{
+		if (!Settings.OutputPath.StartsWith(TEXT("/Game/")))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_InvalidAssetPath", "Asset Output Path must start with /Game/"));
+			return FReply::Handled();
+		}
+	}
+	else
+	{
+		// PNG or EXR
+		if (!IFileManager::Get().DirectoryExists(*Settings.OutputPath))
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_InvalidDir", "Output directory does not exist: {0}"), FText::FromString(Settings.OutputPath)));
+			return FReply::Handled();
+		}
 	}
 
 	FQuickBakerCore::ExecuteBake(Settings);
