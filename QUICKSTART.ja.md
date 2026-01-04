@@ -1,6 +1,6 @@
-![QuickStart](Docs/images/QuickStart.gif)
-
 # QuickBaker クイックスタートガイド
+
+![QuickStart](Docs/images/QuickStart.gif)
 
 **QuickBaker** は、Unreal Engine 5.5+ 向けの軽量なマテリアルベイクツールです。マテリアルの「エミッシブカラー（最終カラー）」出力を、ワンクリックで静的なテクスチャアセット（.uasset）や画像ファイル（.png, .exr）に変換します。ノイズパターンやSDF（Signed Distance Fields）、プロシージャルな模様をテクスチャ化するのに最適です。
 
