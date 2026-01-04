@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Kurorekishi (EmbarrassingMoment). Licensed under MIT License.
+// Copyright (c) 2026 Kurorekishi (EmbarrassingMoment). Licensed under MIT License.
 
 #include "QuickBakerExporter.h"
 #include "IImageWrapper.h"
