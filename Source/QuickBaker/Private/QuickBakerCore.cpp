@@ -58,6 +58,21 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		RF_Transient
 	);
 
+	// GC Protection: Add to root to prevent garbage collection during the baking process.
+	if (RenderTarget)
+	{
+		RenderTarget->AddToRoot();
+	}
+
+	// Ensure RemoveFromRoot is called when the function exits (even if early return occurs).
+	ON_SCOPE_EXIT
+	{
+		if (RenderTarget)
+		{
+			RenderTarget->RemoveFromRoot();
+		}
+	};
+
 	if (!RenderTarget)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
@@ -70,9 +85,6 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	RenderTarget->bForceLinearGamma = true;
 	RenderTarget->SRGB = false;
 	RenderTarget->UpdateResourceImmediate(true);
-
-	// Use the Transient Package as the Outer for automatic Garbage Collection management.
-	// The RF_Transient flag eliminates the need for manual AddToRoot()/RemoveFromRoot() calls.
 
 	// Phase 2: Material Rendering
 	Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
