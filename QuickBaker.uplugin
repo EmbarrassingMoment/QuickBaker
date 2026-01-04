@@ -12,6 +12,7 @@
 	"SupportURL": "https://github.com/EmbarrassingMoment/QuickBaker/issues",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
+	"EngineVersion": "5.5.0",
 	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
