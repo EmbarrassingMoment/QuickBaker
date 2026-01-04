@@ -14,6 +14,7 @@
 #include "Misc/Paths.h"
 #include "Misc/PackageName.h"
 #include "RenderingThread.h"
+#include "UObject/SavePackage.h"
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
 
@@ -193,6 +194,23 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 
 		// Notify Asset Registry
 		FAssetRegistryModule::AssetCreated(NewTexture);
+
+		FString PackageFileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		SaveArgs.Error = GError;
+		SaveArgs.bForceByteSwapping = true;
+
+		if (UPackage::SavePackage(Package, NewTexture, *PackageFileName, SaveArgs))
+		{
+			UE_LOG(LogQuickBaker, Log, TEXT("Successfully saved asset to: %s"), *PackageFileName);
+		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("Failed to save asset to: %s"), *PackageFileName);
+		}
 
 		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset success: Texture baked successfully at %s"), *FullPackageName);
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Success_Bake", "Texture baked successfully!"));
