@@ -30,7 +30,7 @@ QuickBaker streamlines the process of converting dynamic materials into static t
 ## Features
 - **Multi-Format Support**:
   - **Texture Asset**: Save directly to the Content Browser.
-  - **PNG**: Export to disk (8-bit fixed, Alpha forced to Opaque).
+  - **PNG**: Export to disk (8-bit fixed, sRGB).
   - **EXR**: Export to disk (16-bit float fixed, Linear), ideal for high-precision data like height maps.
 - **Smart UI**:
   - **Thumbnail Preview**: Instantly see a 64x64 preview of your selected material.
@@ -96,6 +96,14 @@ It is **not designed** for baking lighting, shadows, or normal maps.
 - **16-bit**: High precision. **Strongly recommended** for noise textures and SDFs to avoid color banding/posterization.
 
 Note: PNG export is locked to 8-bit, EXR export is locked to 16-bit float.
+
+## Known Issues
+
+1. **HDR Value Clamping in 8-bit Mode**
+   - When using **Asset (8-bit)** or **PNG** output types, values exceeding 1.0 (HDR) will be clamped. If you require HDR values, please use **EXR** or **Asset (16-bit)**.
+
+2. **View-Dependent Material Nodes**
+   - Material nodes that depend on camera position, such as `Fresnel` or `CameraVector`, are fixed based on the camera position at the time of baking and may not produce the expected results.
 
 ## License
 This project is available under the MIT License.
