@@ -106,6 +106,3 @@ Note: PNG export is locked to 8-bit, EXR export is locked to 16-bit float.
 2.  **View-Dependent Material Nodes**:
     *   Nodes like `Fresnel` or `CameraVector` depend on the camera angle.
     *   Since QuickBaker captures from a fixed perspective, these may not produce the expected results.
-
-## License
-This project is available under the MIT License.
