@@ -64,6 +64,21 @@ QuickBaker streamlines the process of converting dynamic materials into static t
    - The **Output Name** is automatically generated but can be customized.
 6. Click **Bake Texture**.
 
+## Compression Settings
+Select the appropriate compression setting for your needs.
+
+| Setting | Recommended Use | Technical Details |
+| :--- | :--- | :--- |
+| **TC_Default** | General color textures (Base Color, etc.) | Standard compression (DXT1/DXT5). Lossy. |
+| **TC_Normalmap** | Normal maps (e.g., generated from noise) | Normal map compression (BC5). High precision for RG channels. |
+| **TC_Grayscale** | Masks, height maps, grayscale noise | Saves single channel only (G8/BC4). Best memory efficiency when color is not needed. |
+| **TC_HDR** | SDF (Signed Distance Fields), LUTs, data requiring values > 1.0 | High precision (BC6H / Float). Essential for smooth gradients. |
+
+> **Note:**
+> *   **TC_Grayscale** discards color information but significantly reduces memory usage.
+> *   **TC_HDR** increases file size but is essential for high-precision data like SDFs.
+> *   These settings apply only to **Asset (.uasset)** output. They are ignored during PNG/EXR export.
+
 ## Requirements
 - Unreal Engine 5.5 or later.
 
