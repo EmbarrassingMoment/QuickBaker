@@ -1,4 +1,5 @@
 # QuickBaker
+[![Available on Fab](https://img.shields.io/badge/Available_on-Fab-0078FF?style=for-the-badge&logo=unrealengine&logoColor=white)](https://www.fab.com/listings/b53f5488-9b96-43cd-9963-e9fedafb56e9)
 
 QuickBaker is a simple and fast tool to bake Material expressions (Emissive/Final Color) into Static Textures for Unreal Engine 5.5+.
 
