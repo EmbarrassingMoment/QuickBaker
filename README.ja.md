@@ -1,4 +1,5 @@
 # QuickBaker
+[![Available on Fab](https://img.shields.io/badge/Available_on-Fab-0078FF?style=for-the-badge&logo=unrealengine&logoColor=white)](https://www.fab.com/listings/b53f5488-9b96-43cd-9963-e9fedafb56e9) ![Unreal Engine](https://img.shields.io/badge/Unreal_Engine-5.5+-313131?style=for-the-badge&logo=unrealengine&logoColor=white) ![Version](https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge&logo=none) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge&logo=none) ![Platform](https://img.shields.io/badge/Platform-Windows-00a2ed?style=for-the-badge&logo=windows&logoColor=white)
 
 QuickBakerは、Unreal Engine 5.5以降向けのマテリアル表現（エミッシブ/ファイナルカラー）を静的テクスチャにベイクするためのシンプルで高速なツールです。
 
