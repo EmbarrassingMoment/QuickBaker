@@ -22,137 +22,154 @@
 
 void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 {
-	// Initialize progress display (3 phases)
-	FScopedSlowTask Task(4.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
-	Task.MakeDialog(true);
+	bool bSuccess = false;
+	FText ResultMessage;
 
-	// Phase 1: Render Target Setup
-	Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
-	if (Task.ShouldCancel())
+	// Scoped block: progress bar is destroyed when this block exits, before any dialog is shown
 	{
-		return;
-	}
+		FScopedSlowTask Task(4.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
+		Task.MakeDialog(true);
 
-	const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
-	const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
-	const bool bIsEXR = Settings.OutputType == EQuickBakerOutputType::EXR;
+		// Phase 1: Render Target Setup
+		Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
+		if (Task.ShouldCancel())
+		{
+			return;
+		}
 
-	// Determine Format
-	ETextureRenderTargetFormat Format = RTF_RGBA16f;
-	if (bIsAsset)
-	{
-		bool bIs16Bit = Settings.BitDepth == EQuickBakerBitDepth::Bit16;
-		Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
-	}
-	else if (bIsPNG)
-	{
-		Format = RTF_RGBA8;
-	}
-	else if (bIsEXR)
-	{
-		Format = RTF_RGBA16f;
-	}
+		const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
+		const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
+		const bool bIsEXR = Settings.OutputType == EQuickBakerOutputType::EXR;
 
-	// Setup Render Target
-	// Create a transient render target.
-	UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
-		GetTransientPackage(),
-		NAME_None,
-		RF_Transient
-	);
+		// Determine Format
+		ETextureRenderTargetFormat Format = RTF_RGBA16f;
+		if (bIsAsset)
+		{
+			bool bIs16Bit = Settings.BitDepth == EQuickBakerBitDepth::Bit16;
+			Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
+		}
+		else if (bIsPNG)
+		{
+			Format = RTF_RGBA8;
+		}
+		else if (bIsEXR)
+		{
+			Format = RTF_RGBA16f;
+		}
 
-	// GC Protection: Add to root to prevent garbage collection during the baking process.
-	if (RenderTarget)
-	{
-		RenderTarget->AddToRoot();
-	}
+		// Setup Render Target
+		// Create a transient render target.
+		UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
+			GetTransientPackage(),
+			NAME_None,
+			RF_Transient
+		);
 
-	// Ensure RemoveFromRoot is called when the function exits (even if early return occurs).
-	ON_SCOPE_EXIT
-	{
+		// GC Protection: Add to root to prevent garbage collection during the baking process.
 		if (RenderTarget)
 		{
-			RenderTarget->RemoveFromRoot();
+			RenderTarget->AddToRoot();
 		}
-	};
 
-	if (!RenderTarget)
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_RTCreate", "Failed to create render target."));
-		return;
-	}
-
-	RenderTarget->InitAutoFormat(Settings.Resolution, Settings.Resolution);
-	RenderTarget->RenderTargetFormat = Format;
-	RenderTarget->bForceLinearGamma = true;
-	RenderTarget->SRGB = false;
-	RenderTarget->UpdateResourceImmediate(true);
-
-	// Phase 2: Material Rendering
-	Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
-	if (Task.ShouldCancel())
-	{
-		return;
-	}
-
-	UWorld* World = nullptr;
-	if (GEditor)
-	{
-		World = GEditor->GetEditorWorldContext().World();
-	}
-
-	if (!World)
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: No valid editor world found."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoWorld", "No valid editor world found."));
-		return;
-	}
-
-	UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
-	UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Settings.SelectedMaterial.Get());
-
-	// Ensure all rendering commands are completed before reading pixels
-	FlushRenderingCommands();
-
-	// Phase 3: Save
-	Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
-	if (Task.ShouldCancel())
-	{
-		return;
-	}
-
-	if (bIsAsset)
-	{
-		BakeToAsset(RenderTarget, Settings);
-	}
-	else
-	{
-		// External Export
-		FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
-		FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
-
-		if (FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG))
+		// Ensure RemoveFromRoot is called when the function exits (even if early return occurs).
+		ON_SCOPE_EXIT
 		{
-			UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
-			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath)));
+			if (RenderTarget)
+			{
+				RenderTarget->RemoveFromRoot();
+			}
+		};
+
+		if (!RenderTarget)
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
+			ResultMessage = LOCTEXT("Error_RTCreate", "Failed to create render target.");
+			FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
+			return;
+		}
+
+		RenderTarget->InitAutoFormat(Settings.Resolution, Settings.Resolution);
+		RenderTarget->RenderTargetFormat = Format;
+		RenderTarget->bForceLinearGamma = true;
+		RenderTarget->SRGB = false;
+		RenderTarget->UpdateResourceImmediate(true);
+
+		// Phase 2: Material Rendering
+		Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
+		if (Task.ShouldCancel())
+		{
+			return;
+		}
+
+		UWorld* World = nullptr;
+		if (GEditor)
+		{
+			World = GEditor->GetEditorWorldContext().World();
+		}
+
+		if (!World)
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: No valid editor world found."));
+			ResultMessage = LOCTEXT("Error_NoWorld", "No valid editor world found.");
+			FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
+			return;
+		}
+
+		UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
+		UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Settings.SelectedMaterial.Get());
+
+		// Ensure all rendering commands are completed before reading pixels
+		FlushRenderingCommands();
+
+		// Phase 3: Save
+		Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
+		if (Task.ShouldCancel())
+		{
+			return;
+		}
+
+		if (bIsAsset)
+		{
+			bSuccess = BakeToAsset(RenderTarget, Settings, ResultMessage);
 		}
 		else
 		{
-			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to save file to disk or convert image at %s"), *FullPath);
-			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image."));
+			// External Export
+			FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
+			FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
+
+			bSuccess = FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG);
+			if (bSuccess)
+			{
+				UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
+				ResultMessage = FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath));
+			}
+			else
+			{
+				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to save file to disk or convert image at %s"), *FullPath);
+				ResultMessage = LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image.");
+			}
 		}
-	}
+	} // FScopedSlowTask is destroyed here — progress bar reaches 100% and closes
+
+	// Show result dialog after the progress bar has fully completed
+	FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 }
 
-void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings)
+bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings, FText& OutResultMessage)
 {
+	// Nested progress: 3 sub-phases (Setup, Read Pixels, Save to Disk)
+	FScopedSlowTask SubTask(3.0f, LOCTEXT("BakeToAsset", "Creating Texture Asset..."));
+
 	if (!RenderTarget)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: RenderTarget is null."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NullRT", "Render Target is null."));
-		return;
+		OutResultMessage = LOCTEXT("Error_NullRT", "Render Target is null.");
+		return false;
 	}
+
+	// Sub-phase 1: Package & texture setup
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("AssetSetup", "Setting up package..."));
 
 	// Normalize package path
 	FString PackagePath = Settings.OutputPath;
@@ -160,9 +177,10 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	{
 		PackagePath = TEXT("/Game/") + PackagePath;
 	}
-	while (PackagePath.EndsWith(TEXT("/")) && PackagePath.Len() > 1)
+	// Remove trailing slashes in a single pass
+	while (PackagePath.Len() > 1 && PackagePath[PackagePath.Len() - 1] == TEXT('/'))
 	{
-		PackagePath.LeftChopInline(1);
+		PackagePath.RemoveAt(PackagePath.Len() - 1, 1, EAllowShrinking::No);
 	}
 
 	// Build full package name
@@ -180,8 +198,8 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 			if (!IFileManager::Get().MakeDirectory(*PackageDirectory, true))
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create output directory at %s"), *PackageDirectory);
-				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_MakeDirectory", "Failed to create output directory."));
-				return;
+				OutResultMessage = LOCTEXT("Error_MakeDirectory", "Failed to create output directory.");
+				return false;
 			}
 		}
 	}
@@ -191,8 +209,8 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (!Package)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create package: %s"), *FullPackageName);
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreatePackage", "Failed to create package."));
-		return;
+		OutResultMessage = LOCTEXT("Error_CreatePackage", "Failed to create package.");
+		return false;
 	}
 
 	Package->FullyLoad();
@@ -215,8 +233,8 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (!NewTexture)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to create UTexture2D object."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_CreateTexture", "Failed to create texture object."));
-		return;
+		OutResultMessage = LOCTEXT("Error_CreateTexture", "Failed to create texture object.");
+		return false;
 	}
 
 	// Determine pixel format based on bit depth
@@ -234,18 +252,24 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (!RenderTargetResource)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Could not get render target resource."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_RTResource", "Failed to access render target resource."));
-		return;
+		OutResultMessage = LOCTEXT("Error_RTResource", "Failed to access render target resource.");
+		return false;
 	}
+
+	// Sub-phase 2: Read pixels from render target
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels", "Reading pixels..."));
 
 	// Lock the texture mip for editing
 	uint8* MipData = NewTexture->Source.LockMip(0);
 	int64 TextureDataSize = 0;
 	bool bReadSuccess = false;
 
+	const int32 NumPixels = Settings.Resolution * Settings.Resolution;
+
 	if (bIs16Bit)
 	{
 		TArray<FFloat16Color> SurfaceData;
+		SurfaceData.Reserve(NumPixels);
 		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
 		{
 			if (SurfaceData.Num() > 0)
@@ -259,6 +283,7 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	else
 	{
 		TArray<FColor> SurfaceData;
+		SurfaceData.Reserve(NumPixels);
 		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
 		ReadPixelFlags.SetLinearToGamma(false);
 
@@ -279,9 +304,12 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (!bReadSuccess)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoPixels", "Failed to read pixels from render target."));
-		return;
+		OutResultMessage = LOCTEXT("Error_NoPixels", "Failed to read pixels from render target.");
+		return false;
 	}
+
+	// Sub-phase 3: Save to disk
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("SavingAsset", "Saving asset to disk..."));
 
 	// Update texture
 	NewTexture->UpdateResource();
@@ -305,14 +333,15 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (bSaved)
 	{
 		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset success: Texture saved to %s"), *PackageFileName);
-		FMessageDialog::Open(EAppMsgType::Ok,
-			FText::Format(LOCTEXT("Success_Bake", "Texture baked successfully!\nSaved to: {0}"),
-				FText::FromString(FullPackageName)));
+		OutResultMessage = FText::Format(LOCTEXT("Success_Bake", "Texture baked successfully!\nSaved to: {0}"),
+			FText::FromString(FullPackageName));
+		return true;
 	}
 	else
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Failed to save package to %s"), *PackageFileName);
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_SavePackage", "Failed to save package to disk."));
+		OutResultMessage = LOCTEXT("Error_SavePackage", "Failed to save package to disk.");
+		return false;
 	}
 }
 

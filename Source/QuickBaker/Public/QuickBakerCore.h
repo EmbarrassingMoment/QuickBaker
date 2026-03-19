@@ -25,6 +25,8 @@ private:
 	 *
 	 * @param RenderTarget The temporary render target containing the baked result.
 	 * @param Settings The bake settings containing output path and compression options.
+	 * @param OutResultMessage The result message to display to the user after the progress bar completes.
+	 * @return True if the asset was saved successfully, false otherwise.
 	 */
-	static void BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings);
+	static bool BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings, FText& OutResultMessage);
 };

@@ -6,6 +6,7 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopedSlowTask.h"
 #include "RenderingThread.h"
 
 DEFINE_LOG_CATEGORY(LogQuickBaker);
@@ -30,17 +31,28 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		return false;
 	}
 
+	// Nested progress: 3 sub-phases (Read Pixels, Compress, Write File)
+	FScopedSlowTask SubTask(3.0f, bIsPNG
+		? LOCTEXT("ExportPNG", "Exporting PNG...")
+		: LOCTEXT("ExportEXR", "Exporting EXR..."));
+
 	FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
 	ReadPixelFlags.SetLinearToGamma(false);
 
 	TArray<uint8> CompressedData;
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 
+	// Sub-phase 1: Read pixels from render target
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels_Export", "Reading pixels..."));
+
 	if (bIsPNG)
 	{
 		// PNG Export (8-bit)
 		TArray<FColor> Bitmap;
 		RTResource->ReadPixels(Bitmap, ReadPixelFlags);
+
+		// Sub-phase 2: Compress image
+		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_PNG", "Compressing PNG..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
@@ -55,16 +67,12 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	else
 	{
 		// EXR Export (16-bit float, Linear color space)
-		TArray<FLinearColor> LinearBitmap;
-		RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
-
-		// Convert FLinearColor to FFloat16Color for EXR export
+		// Read directly as FFloat16Color to avoid intermediate FLinearColor allocation (saves ~50% memory)
 		TArray<FFloat16Color> Bitmap;
-		Bitmap.Reserve(LinearBitmap.Num());
-		for (const FLinearColor& Color : LinearBitmap)
-		{
-			Bitmap.Add(FFloat16Color(Color));
-		}
+		RTResource->ReadFloat16Pixels(Bitmap);
+
+		// Sub-phase 2: Compress image
+		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_EXR", "Compressing EXR..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
@@ -76,6 +84,9 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: EXR Image compression failed for %s."), *FullPath);
 		}
 	}
+
+	// Sub-phase 3: Write file to disk
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("WritingFile", "Writing file to disk..."));
 
 	if (CompressedData.Num() > 0)
 	{
