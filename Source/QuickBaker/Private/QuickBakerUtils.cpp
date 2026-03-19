@@ -3,7 +3,6 @@
 #include "QuickBakerUtils.h"
 #include "QuickBakerExporter.h"
 #include "Engine/TextureRenderTarget2D.h"
-#include "RHIGPUReadback.h"
 #include "RenderingThread.h"
 #include "TextureResource.h"
 
@@ -40,53 +39,38 @@ bool FQuickBakerUtils::ReadbackPixels(UTextureRenderTarget2D* RenderTarget, TArr
 		return false;
 	}
 
-	FRHITexture* RHITexture = RTResource->GetRenderTargetTexture();
-	if (!RHITexture)
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not get RHI texture."));
-		return false;
-	}
-
-	const int32 Width = RHITexture->GetSizeX();
-	const int32 Height = RHITexture->GetSizeY();
-	const int32 BytesPerPixel = bIsFloat16 ? sizeof(FFloat16Color) : sizeof(FColor);
-
-	FRHIGPUTextureReadback Readback(TEXT("QuickBakerReadback"));
-
-	ENQUEUE_RENDER_COMMAND(QuickBakerEnqueueReadback)(
-		[&Readback, RHITexture, Width, Height](FRHICommandListImmediate& RHICmdList)
-		{
-			Readback.EnqueueCopy(RHICmdList, RHITexture, FResolveRect(0, 0, Width, Height));
-		});
-
+	// Ensure all rendering commands (including DrawMaterialToRenderTarget) are complete
 	FlushRenderingCommands();
 
-	if (!Readback.IsReady())
+	const int32 Width = RenderTarget->SizeX;
+	const int32 Height = RenderTarget->SizeY;
+
+	if (bIsFloat16)
 	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: GPU readback not ready after flush."));
-		return false;
+		TArray<FFloat16Color> SurfaceData;
+		SurfaceData.Reserve(Width * Height);
+		if (!RTResource->ReadFloat16Pixels(SurfaceData) || SurfaceData.Num() == 0)
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not read Float16 pixels."));
+			return false;
+		}
+		OutData.SetNumUninitialized(SurfaceData.Num() * sizeof(FFloat16Color));
+		FMemory::Memcpy(OutData.GetData(), SurfaceData.GetData(), OutData.Num());
+	}
+	else
+	{
+		TArray<FColor> SurfaceData;
+		SurfaceData.Reserve(Width * Height);
+		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
+		ReadPixelFlags.SetLinearToGamma(false);
+		if (!RTResource->ReadPixels(SurfaceData, ReadPixelFlags) || SurfaceData.Num() == 0)
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not read pixels."));
+			return false;
+		}
+		OutData.SetNumUninitialized(SurfaceData.Num() * sizeof(FColor));
+		FMemory::Memcpy(OutData.GetData(), SurfaceData.GetData(), OutData.Num());
 	}
 
-	int32 RowPitchInPixels = 0;
-	const void* MappedData = Readback.Lock(RowPitchInPixels);
-	if (!MappedData)
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not lock readback buffer."));
-		return false;
-	}
-
-	const int32 RowBytes = Width * BytesPerPixel;
-	const int32 SrcRowPitch = RowPitchInPixels * BytesPerPixel;
-	OutData.SetNumUninitialized(Width * Height * BytesPerPixel);
-
-	const uint8* Src = static_cast<const uint8*>(MappedData);
-	uint8* Dst = OutData.GetData();
-
-	for (int32 Row = 0; Row < Height; ++Row)
-	{
-		FMemory::Memcpy(Dst + Row * RowBytes, Src + Row * SrcRowPitch, RowBytes);
-	}
-
-	Readback.Unlock();
 	return true;
 }
