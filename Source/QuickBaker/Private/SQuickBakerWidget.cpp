@@ -298,7 +298,7 @@ void SQuickBakerWidget::InitializeOptions()
 	}
 
 	// Resolution
-	TArray<int32> Resolutions = { 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+	TArray<int32> Resolutions = { 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
 	for (int32 Res : Resolutions)
 	{
 		ResolutionOptions.Add(MakeShared<int32>(Res));

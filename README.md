@@ -41,7 +41,7 @@ QuickBaker streamlines the process of converting dynamic materials into static t
 - **Workflow Efficiency**:
   - **Auto-Create Folders**: Destination folders are created automatically if they don't exist.
   - **Context-Sensitive Browse**: Opens the Content Browser for Assets and the OS File Dialog for external exports.
-  - **Flexible Settings**: Supports resolutions from 64 to 8192, 8/16-bit depth, and various compression settings (Default, Normalmap, Grayscale, HDR).
+  - **Flexible Settings**: Supports resolutions from 64 to 16384, 8/16-bit depth, and various compression settings (Default, Normalmap, Grayscale, HDR).
 
 ## Installation
 1. Close Unreal Engine.
@@ -58,7 +58,7 @@ QuickBaker streamlines the process of converting dynamic materials into static t
    - **Asset**: Saves a `.uasset` to your project.
    - **PNG** or **EXR**: Saves an image file to your computer.
 4. **Configure Settings**:
-   - **Resolution**: Choose a size between 64x64 and 8192x8192.
+   - **Resolution**: Choose a size between 64x64 and 16384x16384.
    - **Bit Depth**: Select 8-bit or 16-bit (locked for PNG/EXR). 16-bit is recommended for smooth gradients.
    - **Compression**: Choose the texture compression (e.g., `TC_Normalmap` for normal maps).
 5. **Set Output Path**:

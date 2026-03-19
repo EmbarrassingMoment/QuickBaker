@@ -246,6 +246,7 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (bIs16Bit)
 	{
 		TArray<FFloat16Color> SurfaceData;
+		SurfaceData.SetNumUninitialized(Settings.Resolution * Settings.Resolution);
 		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
 		{
 			if (SurfaceData.Num() > 0)
@@ -259,6 +260,7 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	else
 	{
 		TArray<FColor> SurfaceData;
+		SurfaceData.SetNumUninitialized(Settings.Resolution * Settings.Resolution);
 		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
 		ReadPixelFlags.SetLinearToGamma(false);
 

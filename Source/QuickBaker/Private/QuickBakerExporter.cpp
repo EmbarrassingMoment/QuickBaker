@@ -40,6 +40,7 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	{
 		// PNG Export (8-bit)
 		TArray<FColor> Bitmap;
+		Bitmap.SetNumUninitialized(RenderTarget->SizeX * RenderTarget->SizeY);
 		RTResource->ReadPixels(Bitmap, ReadPixelFlags);
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
@@ -56,6 +57,7 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	{
 		// EXR Export (16-bit float, Linear color space)
 		TArray<FLinearColor> LinearBitmap;
+		LinearBitmap.SetNumUninitialized(RenderTarget->SizeX * RenderTarget->SizeY);
 		RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
 
 		// Convert FLinearColor to FFloat16Color for EXR export
