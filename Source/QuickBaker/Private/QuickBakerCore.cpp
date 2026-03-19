@@ -160,9 +160,10 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	{
 		PackagePath = TEXT("/Game/") + PackagePath;
 	}
-	while (PackagePath.EndsWith(TEXT("/")) && PackagePath.Len() > 1)
+	// Remove trailing slashes in a single pass
+	while (PackagePath.Len() > 1 && PackagePath[PackagePath.Len() - 1] == TEXT('/'))
 	{
-		PackagePath.LeftChopInline(1);
+		PackagePath.RemoveAt(PackagePath.Len() - 1, 1, EAllowShrinking::No);
 	}
 
 	// Build full package name
@@ -243,9 +244,12 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	int64 TextureDataSize = 0;
 	bool bReadSuccess = false;
 
+	const int32 NumPixels = Settings.Resolution * Settings.Resolution;
+
 	if (bIs16Bit)
 	{
 		TArray<FFloat16Color> SurfaceData;
+		SurfaceData.Reserve(NumPixels);
 		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
 		{
 			if (SurfaceData.Num() > 0)
@@ -259,6 +263,7 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	else
 	{
 		TArray<FColor> SurfaceData;
+		SurfaceData.Reserve(NumPixels);
 		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
 		ReadPixelFlags.SetLinearToGamma(false);
 

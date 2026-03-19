@@ -350,50 +350,34 @@ void SQuickBakerWidget::LoadSavedSettings()
 	}
 
 	// Restore Resolution
-	for (const auto& Option : ResolutionOptions)
+	if (const auto* Found = ResolutionOptions.FindByPredicate([&](const TSharedPtr<int32>& Option) { return *Option == EditorSettings->LastUsedResolution; }))
 	{
-		if (*Option == EditorSettings->LastUsedResolution)
-		{
-			SelectedResolution = Option;
-			Settings.Resolution = *SelectedResolution;
-			break;
-		}
+		SelectedResolution = *Found;
+		Settings.Resolution = *SelectedResolution;
 	}
 
 	// Restore Output Type
-	EQuickBakerOutputType SavedOutputType = static_cast<EQuickBakerOutputType>(EditorSettings->LastUsedOutputType);
-	for (const auto& Option : OutputTypeOptions)
+	const EQuickBakerOutputType SavedOutputType = static_cast<EQuickBakerOutputType>(EditorSettings->LastUsedOutputType);
+	if (const auto* Found = OutputTypeOptions.FindByPredicate([&](const TSharedPtr<EQuickBakerOutputType>& Option) { return *Option == SavedOutputType; }))
 	{
-		if (*Option == SavedOutputType)
-		{
-			SelectedOutputType = Option;
-			Settings.OutputType = *SelectedOutputType;
-			break;
-		}
+		SelectedOutputType = *Found;
+		Settings.OutputType = *SelectedOutputType;
 	}
 
 	// Restore Bit Depth
-	EQuickBakerBitDepth SavedBitDepth = static_cast<EQuickBakerBitDepth>(EditorSettings->LastUsedBitDepth);
-	for (const auto& Option : BitDepthOptions)
+	const EQuickBakerBitDepth SavedBitDepth = static_cast<EQuickBakerBitDepth>(EditorSettings->LastUsedBitDepth);
+	if (const auto* Found = BitDepthOptions.FindByPredicate([&](const TSharedPtr<EQuickBakerBitDepth>& Option) { return *Option == SavedBitDepth; }))
 	{
-		if (*Option == SavedBitDepth)
-		{
-			SelectedBitDepth = Option;
-			Settings.BitDepth = *SelectedBitDepth;
-			break;
-		}
+		SelectedBitDepth = *Found;
+		Settings.BitDepth = *SelectedBitDepth;
 	}
 
 	// Restore Compression
-	TextureCompressionSettings SavedCompression = static_cast<TextureCompressionSettings>(EditorSettings->LastUsedCompression);
-	for (const auto& Option : CompressionOptions)
+	const TextureCompressionSettings SavedCompression = static_cast<TextureCompressionSettings>(EditorSettings->LastUsedCompression);
+	if (const auto* Found = CompressionOptions.FindByPredicate([&](const TSharedPtr<TextureCompressionSettings>& Option) { return *Option == SavedCompression; }))
 	{
-		if (*Option == SavedCompression)
-		{
-			SelectedCompression = Option;
-			Settings.Compression = *SelectedCompression;
-			break;
-		}
+		SelectedCompression = *Found;
+		Settings.Compression = *SelectedCompression;
 	}
 
 	// Restore Output Path
@@ -428,27 +412,14 @@ void SQuickBakerWidget::OnOutputTypeChanged(TSharedPtr<EQuickBakerOutputType> Ne
 			Settings.OutputPath = FPaths::ProjectSavedDir();
 		}
 
-		if (Settings.OutputType == EQuickBakerOutputType::PNG)
+		// BitDepthOptions[0] = Bit8, BitDepthOptions[1] = Bit16 (see InitializeOptions)
+		if (Settings.OutputType == EQuickBakerOutputType::PNG && BitDepthOptions.Num() > 0)
 		{
-			for (const auto& Option : BitDepthOptions)
-			{
-				if (*Option == EQuickBakerBitDepth::Bit8)
-				{
-					SelectedBitDepth = Option;
-					break;
-				}
-			}
+			SelectedBitDepth = BitDepthOptions[0]; // Bit8
 		}
-		else if (Settings.OutputType == EQuickBakerOutputType::EXR)
+		else if (Settings.OutputType == EQuickBakerOutputType::EXR && BitDepthOptions.Num() > 1)
 		{
-			for (const auto& Option : BitDepthOptions)
-			{
-				if (*Option == EQuickBakerBitDepth::Bit16)
-				{
-					SelectedBitDepth = Option;
-					break;
-				}
-			}
+			SelectedBitDepth = BitDepthOptions[1]; // Bit16
 		}
 		Settings.BitDepth = *SelectedBitDepth;
 
@@ -678,14 +649,14 @@ FReply SQuickBakerWidget::OnBakeClicked()
 		return FReply::Handled();
 	}
 
-	// Validate OutputName
-	FString InvalidChars = TEXT("/\\:*?\"<>|");
-	for (int32 i = 0; i < InvalidChars.Len(); ++i)
+	// Validate OutputName using TCHAR array to avoid per-character FString allocation
+	static const TCHAR InvalidChars[] = TEXT("/\\:*?\"<>|");
+	for (const TCHAR* pChar = InvalidChars; *pChar != TEXT('\0'); ++pChar)
 	{
-		FString Char = InvalidChars.Mid(i, 1);
-		if (Settings.OutputName.Contains(Char))
+		int32 FoundIndex;
+		if (Settings.OutputName.FindChar(*pChar, FoundIndex))
 		{
-			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_InvalidName", "Output Name contains invalid character: {0}"), FText::FromString(Char)));
+			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_InvalidName", "Output Name contains invalid character: {0}"), FText::FromString(FString(1, pChar))));
 			return FReply::Handled();
 		}
 	}

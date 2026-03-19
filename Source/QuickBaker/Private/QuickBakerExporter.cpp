@@ -55,16 +55,9 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	else
 	{
 		// EXR Export (16-bit float, Linear color space)
-		TArray<FLinearColor> LinearBitmap;
-		RTResource->ReadLinearColorPixels(LinearBitmap, ReadPixelFlags);
-
-		// Convert FLinearColor to FFloat16Color for EXR export
+		// Read directly as FFloat16Color to avoid intermediate FLinearColor allocation (saves ~50% memory)
 		TArray<FFloat16Color> Bitmap;
-		Bitmap.Reserve(LinearBitmap.Num());
-		for (const FLinearColor& Color : LinearBitmap)
-		{
-			Bitmap.Add(FFloat16Color(Color));
-		}
+		RTResource->ReadFloat16Pixels(Bitmap);
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
 		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
