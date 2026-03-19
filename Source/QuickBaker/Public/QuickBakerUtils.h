@@ -27,9 +27,18 @@ public:
 	 * Handles row pitch alignment differences between GPU and CPU memory layouts.
 	 *
 	 * @param RenderTarget The source render target to read pixels from.
-	 * @param OutData Output buffer that will contain the raw pixel data.
-	 * @param bIsFloat16 If true, reads as FFloat16Color (8 bytes/pixel). If false, reads as FColor (4 bytes/pixel).
+	 * @param OutData Output buffer that will contain the raw pixel data as FFloat16Color (8 bytes/pixel).
 	 * @return True if the readback was successful, false otherwise.
 	 */
-	static bool ReadbackPixels(UTextureRenderTarget2D* RenderTarget, TArray<uint8>& OutData, bool bIsFloat16);
+	static bool ReadbackFloat16Pixels(UTextureRenderTarget2D* RenderTarget, TArray<FFloat16Color>& OutData);
+
+	/**
+	 * Reads pixel data from a render target using FRHIGPUTextureReadback for efficient GPU-to-CPU transfer.
+	 * Handles row pitch alignment differences between GPU and CPU memory layouts.
+	 *
+	 * @param RenderTarget The source render target to read pixels from.
+	 * @param OutData Output buffer that will contain the raw pixel data as FColor (4 bytes/pixel).
+	 * @return True if the readback was successful, false otherwise.
+	 */
+	static bool ReadbackColorPixels(UTextureRenderTarget2D* RenderTarget, TArray<FColor>& OutData);
 };

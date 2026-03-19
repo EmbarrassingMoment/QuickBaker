@@ -236,17 +236,31 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	// Sub-phase 2: Read pixels from render target using async GPU readback
 	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels", "Reading pixels..."));
 
-	TArray<uint8> PixelData;
-	if (!FQuickBakerUtils::ReadbackPixels(RenderTarget, PixelData, bIs16Bit))
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
-		OutResultMessage = LOCTEXT("Error_NoPixels", "Failed to read pixels from render target.");
-		return false;
-	}
-
-	// Lock the texture mip and copy pixel data
 	uint8* MipData = NewTexture->Source.LockMip(0);
-	FMemory::Memcpy(MipData, PixelData.GetData(), PixelData.Num());
+	if (bIs16Bit)
+	{
+		TArray<FFloat16Color> PixelData;
+		if (!FQuickBakerUtils::ReadbackFloat16Pixels(RenderTarget, PixelData))
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
+			OutResultMessage = LOCTEXT("Error_NoPixels", "Failed to read pixels from render target.");
+			NewTexture->Source.UnlockMip(0);
+			return false;
+		}
+		FMemory::Memcpy(MipData, PixelData.GetData(), (int64)PixelData.Num() * sizeof(FFloat16Color));
+	}
+	else
+	{
+		TArray<FColor> PixelData;
+		if (!FQuickBakerUtils::ReadbackColorPixels(RenderTarget, PixelData))
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: No pixel data read from render target."));
+			OutResultMessage = LOCTEXT("Error_NoPixels", "Failed to read pixels from render target.");
+			NewTexture->Source.UnlockMip(0);
+			return false;
+		}
+		FMemory::Memcpy(MipData, PixelData.GetData(), (int64)PixelData.Num() * sizeof(FColor));
+	}
 	NewTexture->Source.UnlockMip(0);
 
 	// Sub-phase 3: Save to disk

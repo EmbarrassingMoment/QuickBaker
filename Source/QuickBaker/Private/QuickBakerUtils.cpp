@@ -24,18 +24,18 @@ FString FQuickBakerUtils::GetTextureNameFromMaterial(const FString& MaterialName
 	return Name;
 }
 
-bool FQuickBakerUtils::ReadbackPixels(UTextureRenderTarget2D* RenderTarget, TArray<uint8>& OutData, bool bIsFloat16)
+bool FQuickBakerUtils::ReadbackFloat16Pixels(UTextureRenderTarget2D* RenderTarget, TArray<FFloat16Color>& OutData)
 {
 	if (!RenderTarget)
 	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: RenderTarget is null."));
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackFloat16Pixels failed: RenderTarget is null."));
 		return false;
 	}
 
 	FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	if (!RTResource)
 	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not get render target resource."));
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackFloat16Pixels failed: Could not get render target resource."));
 		return false;
 	}
 
@@ -45,31 +45,44 @@ bool FQuickBakerUtils::ReadbackPixels(UTextureRenderTarget2D* RenderTarget, TArr
 	const int32 Width = RenderTarget->SizeX;
 	const int32 Height = RenderTarget->SizeY;
 
-	if (bIsFloat16)
+	OutData.Reserve(Width * Height);
+	if (!RTResource->ReadFloat16Pixels(OutData) || OutData.Num() == 0)
 	{
-		TArray<FFloat16Color> SurfaceData;
-		SurfaceData.Reserve(Width * Height);
-		if (!RTResource->ReadFloat16Pixels(SurfaceData) || SurfaceData.Num() == 0)
-		{
-			UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not read Float16 pixels."));
-			return false;
-		}
-		OutData.SetNumUninitialized(SurfaceData.Num() * sizeof(FFloat16Color));
-		FMemory::Memcpy(OutData.GetData(), SurfaceData.GetData(), OutData.Num());
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackFloat16Pixels failed: Could not read Float16 pixels."));
+		return false;
 	}
-	else
+
+	return true;
+}
+
+bool FQuickBakerUtils::ReadbackColorPixels(UTextureRenderTarget2D* RenderTarget, TArray<FColor>& OutData)
+{
+	if (!RenderTarget)
 	{
-		TArray<FColor> SurfaceData;
-		SurfaceData.Reserve(Width * Height);
-		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
-		ReadPixelFlags.SetLinearToGamma(false);
-		if (!RTResource->ReadPixels(SurfaceData, ReadPixelFlags) || SurfaceData.Num() == 0)
-		{
-			UE_LOG(LogQuickBaker, Error, TEXT("ReadbackPixels failed: Could not read pixels."));
-			return false;
-		}
-		OutData.SetNumUninitialized(SurfaceData.Num() * sizeof(FColor));
-		FMemory::Memcpy(OutData.GetData(), SurfaceData.GetData(), OutData.Num());
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackColorPixels failed: RenderTarget is null."));
+		return false;
+	}
+
+	FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+	if (!RTResource)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackColorPixels failed: Could not get render target resource."));
+		return false;
+	}
+
+	// Ensure all rendering commands (including DrawMaterialToRenderTarget) are complete
+	FlushRenderingCommands();
+
+	const int32 Width = RenderTarget->SizeX;
+	const int32 Height = RenderTarget->SizeY;
+
+	OutData.Reserve(Width * Height);
+	FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
+	ReadPixelFlags.SetLinearToGamma(false);
+	if (!RTResource->ReadPixels(OutData, ReadPixelFlags) || OutData.Num() == 0)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ReadbackColorPixels failed: Could not read pixels."));
+		return false;
 	}
 
 	return true;

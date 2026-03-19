@@ -31,13 +31,6 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	// Sub-phase 1: Read pixels from render target using async GPU readback
 	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels_Export", "Reading pixels..."));
 
-	TArray<uint8> PixelData;
-	if (!FQuickBakerUtils::ReadbackPixels(RenderTarget, PixelData, !bIsPNG))
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not read pixels from render target."));
-		return false;
-	}
-
 	const int32 Width = RenderTarget->SizeX;
 	const int32 Height = RenderTarget->SizeY;
 
@@ -47,10 +40,17 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	// Sub-phase 2: Compress image
 	if (bIsPNG)
 	{
+		TArray<FColor> PixelData;
+		if (!FQuickBakerUtils::ReadbackColorPixels(RenderTarget, PixelData))
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not read pixels from render target."));
+			return false;
+		}
+
 		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_PNG", "Compressing PNG..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
-		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::BGRA, 8))
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), (int64)PixelData.Num() * sizeof(FColor), Width, Height, ERGBFormat::BGRA, 8))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
@@ -61,10 +61,17 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	}
 	else
 	{
+		TArray<FFloat16Color> PixelData;
+		if (!FQuickBakerUtils::ReadbackFloat16Pixels(RenderTarget, PixelData))
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFile failed: Could not read pixels from render target."));
+			return false;
+		}
+
 		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_EXR", "Compressing EXR..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
-		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::RGBAF, 16))
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), (int64)PixelData.Num() * sizeof(FFloat16Color), Width, Height, ERGBFormat::RGBAF, 16))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
@@ -106,31 +113,31 @@ void FQuickBakerExporter::ExportToFileAsync(UTextureRenderTarget2D* RenderTarget
 		return;
 	}
 
-	// Read pixels on the game thread (requires GPU access)
-	TArray<uint8> PixelData;
-	if (!FQuickBakerUtils::ReadbackPixels(RenderTarget, PixelData, !bIsPNG))
-	{
-		UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not read pixels from render target."));
-		if (OnComplete)
-		{
-			OnComplete(false, FullPath);
-		}
-		return;
-	}
-
 	const int32 Width = RenderTarget->SizeX;
 	const int32 Height = RenderTarget->SizeY;
 
-	// Offload compression and disk I/O to a background thread
-	Async(EAsyncExecution::ThreadPool, [PixelData = MoveTemp(PixelData), FullPath, bIsPNG, Width, Height, OnComplete]()
+	if (bIsPNG)
 	{
-		IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-
-		TArray<uint8> CompressedData;
-		if (bIsPNG)
+		// Read pixels on the game thread (requires GPU access)
+		TArray<FColor> PixelData;
+		if (!FQuickBakerUtils::ReadbackColorPixels(RenderTarget, PixelData))
 		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not read pixels from render target."));
+			if (OnComplete)
+			{
+				OnComplete(false, FullPath);
+			}
+			return;
+		}
+
+		// Offload compression and disk I/O to a background thread
+		Async(EAsyncExecution::ThreadPool, [PixelData = MoveTemp(PixelData), FullPath, Width, Height, OnComplete]()
+		{
+			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TArray<uint8> CompressedData;
+
 			TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
-			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::BGRA, 8))
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), (int64)PixelData.Num() * sizeof(FColor), Width, Height, ERGBFormat::BGRA, 8))
 			{
 				CompressedData = ImageWrapper->GetCompressed();
 			}
@@ -138,11 +145,53 @@ void FQuickBakerExporter::ExportToFileAsync(UTextureRenderTarget2D* RenderTarget
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: PNG compression failed for %s."), *FullPath);
 			}
-		}
-		else
+
+			bool bSuccess = false;
+			if (CompressedData.Num() > 0)
+			{
+				bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
+				if (bSuccess)
+				{
+					UE_LOG(LogQuickBaker, Log, TEXT("Successfully exported texture to %s"), *FullPath);
+				}
+				else
+				{
+					UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not write file to %s"), *FullPath);
+				}
+			}
+
+			// Callback on the game thread
+			if (OnComplete)
+			{
+				AsyncTask(ENamedThreads::GameThread, [OnComplete, bSuccess, FullPath]()
+				{
+					OnComplete(bSuccess, FullPath);
+				});
+			}
+		});
+	}
+	else
+	{
+		// Read pixels on the game thread (requires GPU access)
+		TArray<FFloat16Color> PixelData;
+		if (!FQuickBakerUtils::ReadbackFloat16Pixels(RenderTarget, PixelData))
 		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not read pixels from render target."));
+			if (OnComplete)
+			{
+				OnComplete(false, FullPath);
+			}
+			return;
+		}
+
+		// Offload compression and disk I/O to a background thread
+		Async(EAsyncExecution::ThreadPool, [PixelData = MoveTemp(PixelData), FullPath, Width, Height, OnComplete]()
+		{
+			IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+			TArray<uint8> CompressedData;
+
 			TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
-			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::RGBAF, 16))
+			if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), (int64)PixelData.Num() * sizeof(FFloat16Color), Width, Height, ERGBFormat::RGBAF, 16))
 			{
 				CompressedData = ImageWrapper->GetCompressed();
 			}
@@ -150,31 +199,31 @@ void FQuickBakerExporter::ExportToFileAsync(UTextureRenderTarget2D* RenderTarget
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: EXR compression failed for %s."), *FullPath);
 			}
-		}
 
-		bool bSuccess = false;
-		if (CompressedData.Num() > 0)
-		{
-			bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
-			if (bSuccess)
+			bool bSuccess = false;
+			if (CompressedData.Num() > 0)
 			{
-				UE_LOG(LogQuickBaker, Log, TEXT("Successfully exported texture to %s"), *FullPath);
+				bSuccess = FFileHelper::SaveArrayToFile(CompressedData, *FullPath);
+				if (bSuccess)
+				{
+					UE_LOG(LogQuickBaker, Log, TEXT("Successfully exported texture to %s"), *FullPath);
+				}
+				else
+				{
+					UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not write file to %s"), *FullPath);
+				}
 			}
-			else
-			{
-				UE_LOG(LogQuickBaker, Error, TEXT("ExportToFileAsync failed: Could not write file to %s"), *FullPath);
-			}
-		}
 
-		// Callback on the game thread
-		if (OnComplete)
-		{
-			AsyncTask(ENamedThreads::GameThread, [OnComplete, bSuccess, FullPath]()
+			// Callback on the game thread
+			if (OnComplete)
 			{
-				OnComplete(bSuccess, FullPath);
-			});
-		}
-	});
+				AsyncTask(ENamedThreads::GameThread, [OnComplete, bSuccess, FullPath]()
+				{
+					OnComplete(bSuccess, FullPath);
+				});
+			}
+		});
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
