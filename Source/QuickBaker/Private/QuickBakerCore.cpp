@@ -147,12 +147,18 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings)
 {
+	// Nested progress: 3 sub-phases (Setup, Read Pixels, Save to Disk)
+	FScopedSlowTask SubTask(3.0f, LOCTEXT("BakeToAsset", "Creating Texture Asset..."));
+
 	if (!RenderTarget)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: RenderTarget is null."));
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NullRT", "Render Target is null."));
 		return;
 	}
+
+	// Sub-phase 1: Package & texture setup
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("AssetSetup", "Setting up package..."));
 
 	// Normalize package path
 	FString PackagePath = Settings.OutputPath;
@@ -239,6 +245,9 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		return;
 	}
 
+	// Sub-phase 2: Read pixels from render target
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels", "Reading pixels..."));
+
 	// Lock the texture mip for editing
 	uint8* MipData = NewTexture->Source.LockMip(0);
 	int64 TextureDataSize = 0;
@@ -287,6 +296,9 @@ void FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Error_NoPixels", "Failed to read pixels from render target."));
 		return;
 	}
+
+	// Sub-phase 3: Save to disk
+	SubTask.EnterProgressFrame(1.0f, LOCTEXT("SavingAsset", "Saving asset to disk..."));
 
 	// Update texture
 	NewTexture->UpdateResource();
