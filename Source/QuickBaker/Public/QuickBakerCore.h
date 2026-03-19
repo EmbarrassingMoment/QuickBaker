@@ -14,10 +14,13 @@ class QUICKBAKER_API FQuickBakerCore
 public:
 	/**
 	 * Executes the bake process based on the provided settings.
+	 * For Asset output, the operation is synchronous.
+	 * For PNG/EXR output, compression and disk I/O run on a background thread.
 	 *
 	 * @param Settings The configuration for the bake operation, including material, resolution, and output path.
+	 * @param OnComplete Optional callback invoked on the game thread when the bake operation is fully complete.
 	 */
-	static void ExecuteBake(const FQuickBakerSettings& Settings);
+	static void ExecuteBake(const FQuickBakerSettings& Settings, TFunction<void()> OnComplete = nullptr);
 
 private:
 	/**

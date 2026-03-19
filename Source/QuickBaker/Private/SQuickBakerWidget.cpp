@@ -269,9 +269,10 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 		[
 			SNew(SButton)
 			.ToolTipText(LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File."))
+			.IsEnabled_Lambda([this]() { return !bIsBaking; })
 			.ContentPadding(FMargin(10, 5))
 			.HAlign(HAlign_Center)
-			.Text(LOCTEXT("BakeTexture", "Bake Texture"))
+			.Text_Lambda([this]() { return bIsBaking ? LOCTEXT("Baking", "Baking...") : LOCTEXT("BakeTexture", "Bake Texture"); })
 			.OnClicked_Raw(this, &SQuickBakerWidget::OnBakeClicked)
 		]
 	];
@@ -680,7 +681,11 @@ FReply SQuickBakerWidget::OnBakeClicked()
 		}
 	}
 
-	FQuickBakerCore::ExecuteBake(Settings);
+	bIsBaking = true;
+	FQuickBakerCore::ExecuteBake(Settings, [this]()
+	{
+		bIsBaking = false;
+	});
 	return FReply::Handled();
 }
 
