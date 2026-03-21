@@ -57,6 +57,18 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			Format = RTF_RGBA16f;
 		}
 
+		// Validate that the pixel buffer size does not exceed TArray's int32 limit.
+		// For example, 16384 x 16384 x 8 bytes (RGBA16f) = 2,147,483,648 which overflows int32.
+		const int64 BytesPerPixel = (Format == RTF_RGBA16f) ? sizeof(FFloat16Color) : sizeof(FColor);
+		const int64 TotalBufferSize = static_cast<int64>(Settings.Resolution) * static_cast<int64>(Settings.Resolution) * BytesPerPixel;
+		if (TotalBufferSize > static_cast<int64>(MAX_int32))
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Buffer size (%lld bytes) exceeds maximum for resolution %d with current format."), TotalBufferSize, Settings.Resolution);
+			ResultMessage = LOCTEXT("Error_BufferOverflow", "The combination of resolution and bit depth exceeds the maximum buffer size.\nPlease reduce the resolution or use 8-bit mode.");
+			FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
+			return;
+		}
+
 		// Setup Render Target
 		// Create a transient render target.
 		UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
