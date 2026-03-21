@@ -245,7 +245,9 @@ bool FQuickBakerAsyncTask::PhaseReadPixels()
 	if (bIs16Bit)
 	{
 		TArray<FFloat16Color> ChunkData;
-		RTResource->ReadFloat16Pixels(ChunkData, ReadRegion);
+		FReadSurfaceDataFlags ReadFlags(RCM_MinMax);
+		ReadFlags.SetLinearToGamma(false);
+		RTResource->ReadFloat16Pixels(ChunkData, ReadFlags, ReadRegion);
 
 		if (ChunkData.Num() > 0)
 		{
