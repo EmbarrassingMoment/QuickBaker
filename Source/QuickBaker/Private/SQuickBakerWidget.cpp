@@ -631,13 +631,6 @@ void SQuickBakerWidget::OnOutputNameChanged(const FText& NewText)
 
 FReply SQuickBakerWidget::OnBakeClicked()
 {
-	// If already baking, treat this as a Cancel click
-	if (IsBaking())
-	{
-		ActiveBakeTask->Cancel();
-		return FReply::Handled();
-	}
-
 	// Validation
 	if (!Settings.SelectedMaterial.IsValid())
 	{
