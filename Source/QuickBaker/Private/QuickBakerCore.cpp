@@ -264,17 +264,16 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	int64 TextureDataSize = 0;
 	bool bReadSuccess = false;
 
-	const int32 NumPixels = Settings.Resolution * Settings.Resolution;
+	const int64 NumPixels = (int64)Settings.Resolution * Settings.Resolution;
 
 	if (bIs16Bit)
 	{
 		TArray<FFloat16Color> SurfaceData;
-		SurfaceData.Reserve(NumPixels);
 		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
 		{
 			if (SurfaceData.Num() > 0)
 			{
-				TextureDataSize = SurfaceData.Num() * sizeof(FFloat16Color);
+				TextureDataSize = (int64)SurfaceData.Num() * sizeof(FFloat16Color);
 				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
 				bReadSuccess = true;
 			}
@@ -283,7 +282,6 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	else
 	{
 		TArray<FColor> SurfaceData;
-		SurfaceData.Reserve(NumPixels);
 		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
 		ReadPixelFlags.SetLinearToGamma(false);
 
@@ -291,7 +289,7 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		{
 			if (SurfaceData.Num() > 0)
 			{
-				TextureDataSize = SurfaceData.Num() * sizeof(FColor);
+				TextureDataSize = (int64)SurfaceData.Num() * sizeof(FColor);
 				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
 				bReadSuccess = true;
 			}
