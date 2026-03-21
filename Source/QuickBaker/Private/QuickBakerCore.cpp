@@ -71,12 +71,15 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			RenderTarget->AddToRoot();
 		}
 
-		// Ensure RemoveFromRoot is called when the function exits (even if early return occurs).
+		// Ensure render target resources are properly released when the function exits (even if early return occurs).
 		ON_SCOPE_EXIT
 		{
 			if (RenderTarget)
 			{
+				FlushRenderingCommands();
+				RenderTarget->ReleaseResource();
 				RenderTarget->RemoveFromRoot();
+				RenderTarget->MarkAsGarbage();
 			}
 		};
 
@@ -313,6 +316,7 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 
 	// Update texture
 	NewTexture->UpdateResource();
+	FlushRenderingCommands();
 
 	// Mark package as dirty
 	Package->MarkPackageDirty();
