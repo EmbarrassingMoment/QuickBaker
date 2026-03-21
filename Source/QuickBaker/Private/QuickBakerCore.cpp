@@ -71,11 +71,13 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			RenderTarget->AddToRoot();
 		}
 
-		// Ensure RemoveFromRoot is called when the function exits (even if early return occurs).
+		// Ensure cleanup when the function exits (even if early return occurs).
 		ON_SCOPE_EXIT
 		{
 			if (RenderTarget)
 			{
+				RenderTarget->ReleaseResource();
+				FlushRenderingCommands();
 				RenderTarget->RemoveFromRoot();
 			}
 		};
@@ -220,6 +222,10 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	if (NewTexture)
 	{
 		UE_LOG(LogQuickBaker, Log, TEXT("BakeToAsset: Updating existing asset %s"), *FullPackageName);
+		// Release the render resource before reinitializing source data
+		// to prevent use-after-free on the render thread
+		NewTexture->ReleaseResource();
+		FlushRenderingCommands();
 	}
 	else
 	{
