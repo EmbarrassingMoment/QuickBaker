@@ -55,7 +55,7 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_PNG", "Compressing PNG..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
-		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), (int64)Bitmap.Num() * sizeof(FColor), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::BGRA, 8))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
@@ -75,7 +75,7 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		SubTask.EnterProgressFrame(1.0f, LOCTEXT("Compressing_EXR", "Compressing EXR..."));
 
 		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
-		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(Bitmap.GetData(), (int64)Bitmap.Num() * sizeof(FFloat16Color), RenderTarget->SizeX, RenderTarget->SizeY, ERGBFormat::RGBAF, 16))
 		{
 			CompressedData = ImageWrapper->GetCompressed();
 		}
