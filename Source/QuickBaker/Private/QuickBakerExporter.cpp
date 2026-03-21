@@ -104,4 +104,56 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 	return false;
 }
 
+bool FQuickBakerExporter::ExportFromBuffer(const TArray<uint8>& PixelData, int32 Width, int32 Height, const FString& FullPath, bool bIsPNG, bool bIs16Bit)
+{
+	if (PixelData.Num() == 0)
+	{
+		UE_LOG(LogQuickBaker, Error, TEXT("ExportFromBuffer failed: PixelData is empty."));
+		return false;
+	}
+
+	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
+	TArray<uint8> CompressedData;
+
+	if (bIsPNG)
+	{
+		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::PNG);
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::BGRA, 8))
+		{
+			CompressedData = ImageWrapper->GetCompressed();
+		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportFromBuffer failed: PNG compression failed for %s."), *FullPath);
+		}
+	}
+	else
+	{
+		TSharedPtr<IImageWrapper> ImageWrapper = ImageWrapperModule.CreateImageWrapper(EImageFormat::EXR);
+		if (ImageWrapper.IsValid() && ImageWrapper->SetRaw(PixelData.GetData(), PixelData.Num(), Width, Height, ERGBFormat::RGBAF, 16))
+		{
+			CompressedData = ImageWrapper->GetCompressed();
+		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportFromBuffer failed: EXR compression failed for %s."), *FullPath);
+		}
+	}
+
+	if (CompressedData.Num() > 0)
+	{
+		if (FFileHelper::SaveArrayToFile(CompressedData, *FullPath))
+		{
+			UE_LOG(LogQuickBaker, Log, TEXT("Successfully exported texture to %s"), *FullPath);
+			return true;
+		}
+		else
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExportFromBuffer failed: Could not write file to %s"), *FullPath);
+		}
+	}
+
+	return false;
+}
+
 #undef LOCTEXT_NAMESPACE

@@ -156,6 +156,11 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 }
 
+TSharedPtr<FQuickBakerAsyncTask> FQuickBakerCore::ExecuteBakeAsync(const FQuickBakerSettings& Settings)
+{
+	return FQuickBakerAsyncTask::Start(Settings);
+}
+
 bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings, FText& OutResultMessage)
 {
 	// Nested progress: 3 sub-phases (Setup, Read Pixels, Save to Disk)

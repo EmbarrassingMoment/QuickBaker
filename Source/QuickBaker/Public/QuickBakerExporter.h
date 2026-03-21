@@ -23,4 +23,18 @@ public:
 	 * @return True if the file was successfully saved, false otherwise.
 	 */
 	static bool ExportToFile(UTextureRenderTarget2D* RenderTarget, const FString& FullPath, bool bIsPNG);
+
+	/**
+	 * Exports a raw pixel buffer to a file on disk (PNG or EXR).
+	 * Used by the async bake path where pixels have already been read into a buffer.
+	 *
+	 * @param PixelData Raw pixel data (FColor for 8-bit, FFloat16Color for 16-bit).
+	 * @param Width Image width in pixels.
+	 * @param Height Image height in pixels.
+	 * @param FullPath The full file system path including extension.
+	 * @param bIsPNG True for PNG (8-bit), false for EXR (16-bit float).
+	 * @param bIs16Bit True if PixelData contains FFloat16Color, false for FColor.
+	 * @return True if the file was successfully saved.
+	 */
+	static bool ExportFromBuffer(const TArray<uint8>& PixelData, int32 Width, int32 Height, const FString& FullPath, bool bIsPNG, bool bIs16Bit);
 };

@@ -9,6 +9,7 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Notifications/SProgressBar.h"
 #include "PropertyCustomizationHelpers.h"
 #include "AssetThumbnail.h"
 #include "Materials/MaterialInterface.h"
@@ -262,23 +263,82 @@ void SQuickBakerWidget::Construct(const FArguments& InArgs)
 			]
 		]
 
-		// 10. Bake Button
+		// 10. Bake / Cancel Button
 		+ SVerticalBox::Slot()
 		.AutoHeight()
 		.Padding(5)
 		[
 			SNew(SButton)
-			.ToolTipText(LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File."))
+			.ToolTipText_Lambda([this]()
+			{
+				return IsBaking()
+					? LOCTEXT("Tooltip_Cancel", "Cancel the current bake operation.")
+					: LOCTEXT("Tooltip_Bake", "Start the baking process. This will render the material to a temporary Render Target and save it as a Static Texture or File.");
+			})
 			.ContentPadding(FMargin(10, 5))
 			.HAlign(HAlign_Center)
-			.Text(LOCTEXT("BakeTexture", "Bake Texture"))
+			.Text_Lambda([this]()
+			{
+				return IsBaking()
+					? LOCTEXT("CancelBake", "Cancel")
+					: LOCTEXT("BakeTexture", "Bake Texture");
+			})
 			.OnClicked_Raw(this, &SQuickBakerWidget::OnBakeClicked)
+		]
+
+		// 11. Progress Section (visible only during baking)
+		+ SVerticalBox::Slot()
+		.AutoHeight()
+		.Padding(5)
+		[
+			SAssignNew(ProgressSection, SVerticalBox)
+			.Visibility_Lambda([this]() { return IsBaking() ? EVisibility::Visible : EVisibility::Collapsed; })
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0, 2)
+			[
+				SAssignNew(BakeProgressBar, SProgressBar)
+				.Percent_Lambda([this]() -> TOptional<float>
+				{
+					if (ActiveBakeTask.IsValid())
+					{
+						return ActiveBakeTask->GetProgress();
+					}
+					return 0.0f;
+				})
+			]
+
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(0, 2)
+			[
+				SAssignNew(BakeStatusText, STextBlock)
+				.Text_Lambda([this]()
+				{
+					if (ActiveBakeTask.IsValid())
+					{
+						return ActiveBakeTask->GetStatusText();
+					}
+					return FText();
+				})
+				.Font(FCoreStyle::GetDefaultFontStyle("Italic", 8))
+				.ColorAndOpacity(FSlateColor::UseForeground())
+			]
 		]
 	];
 }
 
 SQuickBakerWidget::~SQuickBakerWidget()
 {
+	// Cancel any running bake task to prevent dangling callbacks
+	if (ActiveBakeTask.IsValid())
+	{
+		ActiveBakeTask->OnComplete.Unbind();
+		ActiveBakeTask->Cancel();
+		ActiveBakeTask.Reset();
+	}
+
 	if (ThumbnailPool.IsValid())
 	{
 		ThumbnailPool.Reset();
@@ -630,6 +690,13 @@ void SQuickBakerWidget::OnOutputNameChanged(const FText& NewText)
 
 FReply SQuickBakerWidget::OnBakeClicked()
 {
+	// If already baking, treat this as a Cancel click
+	if (IsBaking())
+	{
+		ActiveBakeTask->Cancel();
+		return FReply::Handled();
+	}
+
 	// Validation
 	if (!Settings.SelectedMaterial.IsValid())
 	{
@@ -680,8 +747,20 @@ FReply SQuickBakerWidget::OnBakeClicked()
 		}
 	}
 
-	FQuickBakerCore::ExecuteBake(Settings);
+	// Start async bake
+	ActiveBakeTask = FQuickBakerCore::ExecuteBakeAsync(Settings);
+	if (ActiveBakeTask.IsValid())
+	{
+		ActiveBakeTask->OnComplete.BindRaw(this, &SQuickBakerWidget::OnBakeComplete);
+	}
+
 	return FReply::Handled();
+}
+
+void SQuickBakerWidget::OnBakeComplete(bool bSuccess, const FText& ResultMessage)
+{
+	ActiveBakeTask.Reset();
+	FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 }
 
 FReply SQuickBakerWidget::OnBrowseClicked()
