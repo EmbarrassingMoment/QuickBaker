@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "QuickBakerSettings.h"
-#include "QuickBakerAsync.h"
 
 /**
  * Core logic class for QuickBaker.
@@ -19,15 +18,6 @@ public:
 	 * @param Settings The configuration for the bake operation, including material, resolution, and output path.
 	 */
 	static void ExecuteBake(const FQuickBakerSettings& Settings);
-
-	/**
-	 * Starts an async bake operation that does not block the editor.
-	 * Progress can be tracked via the returned task object.
-	 *
-	 * @param Settings The configuration for the bake operation.
-	 * @return A shared pointer to the running async task.
-	 */
-	static TSharedPtr<FQuickBakerAsyncTask> ExecuteBakeAsync(const FQuickBakerSettings& Settings);
 
 private:
 	/**

@@ -20,14 +20,61 @@
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
 
+namespace QuickBakerInternal
+{
+	/** Calculate the number of rows to read per chunk, targeting ~16MB per read. */
+	static int32 CalcChunkRowSize(int32 Resolution, int32 BytesPerPixel)
+	{
+		const int64 TargetChunkBytes = 16 * 1024 * 1024; // 16 MB
+		int32 Rows = FMath::Max(1, static_cast<int32>(TargetChunkBytes / (static_cast<int64>(Resolution) * BytesPerPixel)));
+		return FMath::Min(Rows, Resolution);
+	}
+
+	/** Calculate the number of chunks for a given resolution. */
+	static int32 CalcNumChunks(int32 Resolution, int32 ChunkRowSize)
+	{
+		return FMath::DivideAndRoundUp(Resolution, ChunkRowSize);
+	}
+}
+
 void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 {
 	bool bSuccess = false;
 	FText ResultMessage;
 
+	const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
+	const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
+	const bool bIsEXR = Settings.OutputType == EQuickBakerOutputType::EXR;
+
+	// Determine bit depth and format
+	bool bIs16Bit = false;
+	ETextureRenderTargetFormat Format = RTF_RGBA16f;
+	if (bIsAsset)
+	{
+		bIs16Bit = (Settings.BitDepth == EQuickBakerBitDepth::Bit16);
+		Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
+	}
+	else if (bIsPNG)
+	{
+		bIs16Bit = false;
+		Format = RTF_RGBA8;
+	}
+	else if (bIsEXR)
+	{
+		bIs16Bit = true;
+		Format = RTF_RGBA16f;
+	}
+
+	const int32 BytesPerPixel = bIs16Bit ? 8 : 4;
+	const int32 ChunkRowSize = QuickBakerInternal::CalcChunkRowSize(Settings.Resolution, BytesPerPixel);
+	const int32 NumChunks = QuickBakerInternal::CalcNumChunks(Settings.Resolution, ChunkRowSize);
+
+	// Progress weights: Setup(1) + Rendering(1) + ReadPixels(NumChunks) + Saving(1)
+	const float TotalWork = 3.0f + static_cast<float>(NumChunks);
+
 	// Scoped block: progress bar is destroyed when this block exits, before any dialog is shown
 	{
-		FScopedSlowTask Task(4.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
+		FScopedSlowTask Task(TotalWork, LOCTEXT("BakingTexture", "Baking Texture..."));
 		Task.MakeDialog(true);
 
 		// Phase 1: Render Target Setup
@@ -37,28 +84,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			return;
 		}
 
-		const bool bIsAsset = Settings.OutputType == EQuickBakerOutputType::Asset;
-		const bool bIsPNG = Settings.OutputType == EQuickBakerOutputType::PNG;
-		const bool bIsEXR = Settings.OutputType == EQuickBakerOutputType::EXR;
-
-		// Determine Format
-		ETextureRenderTargetFormat Format = RTF_RGBA16f;
-		if (bIsAsset)
-		{
-			bool bIs16Bit = Settings.BitDepth == EQuickBakerBitDepth::Bit16;
-			Format = bIs16Bit ? RTF_RGBA16f : RTF_RGBA8;
-		}
-		else if (bIsPNG)
-		{
-			Format = RTF_RGBA8;
-		}
-		else if (bIsEXR)
-		{
-			Format = RTF_RGBA16f;
-		}
-
 		// Setup Render Target
-		// Create a transient render target.
 		UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>(
 			GetTransientPackage(),
 			NAME_None,
@@ -95,7 +121,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		RenderTarget->UpdateResourceImmediate(true);
 
 		// Phase 2: Material Rendering
-		Task.EnterProgressFrame(2.0f, LOCTEXT("Rendering", "Rendering Material..."));
+		Task.EnterProgressFrame(1.0f, LOCTEXT("Rendering", "Rendering Material..."));
 		if (Task.ShouldCancel())
 		{
 			return;
@@ -121,8 +147,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		// Ensure all rendering commands are completed before reading pixels
 		FlushRenderingCommands();
 
-		// Phase 3: Save
-		Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
+		// Phase 3: Save (includes chunked ReadPixels)
 		if (Task.ShouldCancel())
 		{
 			return;
@@ -134,20 +159,103 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		}
 		else
 		{
-			// External Export
-			FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
-			FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
-
-			bSuccess = FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG);
-			if (bSuccess)
+			// External Export with chunked ReadPixels
+			FRenderTarget* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+			if (!RTResource)
 			{
-				UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
-				ResultMessage = FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath));
+				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Could not get render target resource."));
+				ResultMessage = LOCTEXT("Error_RTResource", "Failed to access render target resource.");
 			}
 			else
 			{
-				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to save file to disk or convert image at %s"), *FullPath);
-				ResultMessage = LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image.");
+				// Pre-allocate buffer for all pixels
+				const int64 TotalBytes = static_cast<int64>(Settings.Resolution) * Settings.Resolution * BytesPerPixel;
+				TArray<uint8> PixelBuffer;
+				PixelBuffer.SetNumZeroed(TotalBytes);
+
+				bool bReadSuccess = true;
+				const int64 RowBytes = static_cast<int64>(Settings.Resolution) * BytesPerPixel;
+
+				// Chunked ReadPixels with progress
+				for (int32 ChunkStart = 0; ChunkStart < Settings.Resolution; ChunkStart += ChunkRowSize)
+				{
+					const int32 RowsThisChunk = FMath::Min(ChunkRowSize, Settings.Resolution - ChunkStart);
+					Task.EnterProgressFrame(1.0f, FText::Format(
+						LOCTEXT("ReadingPixels_Chunk", "Reading pixels... ({0}%)"),
+						FText::AsNumber(FMath::RoundToInt(static_cast<float>(ChunkStart) / Settings.Resolution * 100.0f))
+					));
+
+					if (Task.ShouldCancel())
+					{
+						return;
+					}
+
+					const FIntRect ReadRegion(0, ChunkStart, Settings.Resolution, ChunkStart + RowsThisChunk);
+					const int64 BufferOffset = static_cast<int64>(ChunkStart) * RowBytes;
+
+					if (bIs16Bit)
+					{
+						TArray<FFloat16Color> ChunkData;
+						FReadSurfaceDataFlags ReadFlags(RCM_MinMax);
+						ReadFlags.SetLinearToGamma(false);
+						RTResource->ReadFloat16Pixels(ChunkData, ReadFlags, ReadRegion);
+
+						if (ChunkData.Num() > 0)
+						{
+							FMemory::Memcpy(PixelBuffer.GetData() + BufferOffset, ChunkData.GetData(),
+								static_cast<int64>(ChunkData.Num()) * sizeof(FFloat16Color));
+						}
+						else
+						{
+							bReadSuccess = false;
+							break;
+						}
+					}
+					else
+					{
+						TArray<FColor> ChunkData;
+						FReadSurfaceDataFlags ReadFlags(RCM_MinMax);
+						ReadFlags.SetLinearToGamma(false);
+						RTResource->ReadPixels(ChunkData, ReadFlags, ReadRegion);
+
+						if (ChunkData.Num() > 0)
+						{
+							FMemory::Memcpy(PixelBuffer.GetData() + BufferOffset, ChunkData.GetData(),
+								static_cast<int64>(ChunkData.Num()) * sizeof(FColor));
+						}
+						else
+						{
+							bReadSuccess = false;
+							break;
+						}
+					}
+				}
+
+				// Save phase
+				Task.EnterProgressFrame(1.0f, LOCTEXT("Saving", "Saving..."));
+
+				if (bReadSuccess)
+				{
+					FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
+					FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
+
+					bSuccess = FQuickBakerExporter::ExportFromBuffer(PixelBuffer, Settings.Resolution, Settings.Resolution, FullPath, bIsPNG, bIs16Bit);
+					if (bSuccess)
+					{
+						UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
+						ResultMessage = FText::Format(LOCTEXT("Success_Export", "Saved to {0}"), FText::FromString(FullPath));
+					}
+					else
+					{
+						UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to save file to disk or convert image at %s"), *FullPath);
+						ResultMessage = LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image.");
+					}
+				}
+				else
+				{
+					UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: No pixel data read from render target."));
+					ResultMessage = LOCTEXT("Error_NoPixels", "Failed to read pixels from render target.");
+				}
 			}
 		}
 	} // FScopedSlowTask is destroyed here — progress bar reaches 100% and closes
@@ -156,22 +264,22 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 	FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 }
 
-TSharedPtr<FQuickBakerAsyncTask> FQuickBakerCore::ExecuteBakeAsync(const FQuickBakerSettings& Settings)
-{
-	return FQuickBakerAsyncTask::Start(Settings);
-}
-
 bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings, FText& OutResultMessage)
 {
-	// Nested progress: 3 sub-phases (Setup, Read Pixels, Save to Disk)
-	FScopedSlowTask SubTask(3.0f, LOCTEXT("BakeToAsset", "Creating Texture Asset..."));
-
 	if (!RenderTarget)
 	{
 		UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: RenderTarget is null."));
 		OutResultMessage = LOCTEXT("Error_NullRT", "Render Target is null.");
 		return false;
 	}
+
+	bool bIs16Bit = (Settings.BitDepth == EQuickBakerBitDepth::Bit16);
+	const int32 BytesPerPixel = bIs16Bit ? 8 : 4;
+	const int32 ChunkRowSize = QuickBakerInternal::CalcChunkRowSize(Settings.Resolution, BytesPerPixel);
+	const int32 NumChunks = QuickBakerInternal::CalcNumChunks(Settings.Resolution, ChunkRowSize);
+
+	// Nested progress: Setup(1) + ReadPixels(NumChunks) + Save(1)
+	FScopedSlowTask SubTask(2.0f + static_cast<float>(NumChunks), LOCTEXT("BakeToAsset", "Creating Texture Asset..."));
 
 	// Sub-phase 1: Package & texture setup
 	SubTask.EnterProgressFrame(1.0f, LOCTEXT("AssetSetup", "Setting up package..."));
@@ -243,7 +351,6 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 	}
 
 	// Determine pixel format based on bit depth
-	bool bIs16Bit = (Settings.BitDepth == EQuickBakerBitDepth::Bit16);
 	ETextureSourceFormat SourceFormat = bIs16Bit ? TSF_RGBA16F : TSF_BGRA8;
 
 	// Initialize texture properties
@@ -261,44 +368,56 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		return false;
 	}
 
-	// Sub-phase 2: Read pixels from render target
-	SubTask.EnterProgressFrame(1.0f, LOCTEXT("ReadingPixels", "Reading pixels..."));
-
-	// Lock the texture mip for editing
+	// Sub-phase 2: Chunked ReadPixels directly into texture mip
 	uint8* MipData = NewTexture->Source.LockMip(0);
-	int64 TextureDataSize = 0;
-	bool bReadSuccess = false;
+	bool bReadSuccess = true;
+	const int64 RowBytes = static_cast<int64>(Settings.Resolution) * BytesPerPixel;
 
-	const int32 NumPixels = Settings.Resolution * Settings.Resolution;
-
-	if (bIs16Bit)
+	for (int32 ChunkStart = 0; ChunkStart < Settings.Resolution; ChunkStart += ChunkRowSize)
 	{
-		TArray<FFloat16Color> SurfaceData;
-		SurfaceData.Reserve(NumPixels);
-		if (RenderTargetResource->ReadFloat16Pixels(SurfaceData))
+		const int32 RowsThisChunk = FMath::Min(ChunkRowSize, Settings.Resolution - ChunkStart);
+		SubTask.EnterProgressFrame(1.0f, FText::Format(
+			LOCTEXT("ReadingPixels_Chunk", "Reading pixels... ({0}%)"),
+			FText::AsNumber(FMath::RoundToInt(static_cast<float>(ChunkStart) / Settings.Resolution * 100.0f))
+		));
+
+		const FIntRect ReadRegion(0, ChunkStart, Settings.Resolution, ChunkStart + RowsThisChunk);
+		const int64 BufferOffset = static_cast<int64>(ChunkStart) * RowBytes;
+
+		if (bIs16Bit)
 		{
-			if (SurfaceData.Num() > 0)
+			TArray<FFloat16Color> ChunkData;
+			FReadSurfaceDataFlags ReadFlags(RCM_MinMax);
+			ReadFlags.SetLinearToGamma(false);
+			RenderTargetResource->ReadFloat16Pixels(ChunkData, ReadFlags, ReadRegion);
+
+			if (ChunkData.Num() > 0)
 			{
-				TextureDataSize = SurfaceData.Num() * sizeof(FFloat16Color);
-				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
-				bReadSuccess = true;
+				FMemory::Memcpy(MipData + BufferOffset, ChunkData.GetData(),
+					static_cast<int64>(ChunkData.Num()) * sizeof(FFloat16Color));
+			}
+			else
+			{
+				bReadSuccess = false;
+				break;
 			}
 		}
-	}
-	else
-	{
-		TArray<FColor> SurfaceData;
-		SurfaceData.Reserve(NumPixels);
-		FReadSurfaceDataFlags ReadPixelFlags(RCM_MinMax);
-		ReadPixelFlags.SetLinearToGamma(false);
-
-		if (RenderTargetResource->ReadPixels(SurfaceData, ReadPixelFlags))
+		else
 		{
-			if (SurfaceData.Num() > 0)
+			TArray<FColor> ChunkData;
+			FReadSurfaceDataFlags ReadFlags(RCM_MinMax);
+			ReadFlags.SetLinearToGamma(false);
+			RenderTargetResource->ReadPixels(ChunkData, ReadFlags, ReadRegion);
+
+			if (ChunkData.Num() > 0)
 			{
-				TextureDataSize = SurfaceData.Num() * sizeof(FColor);
-				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
-				bReadSuccess = true;
+				FMemory::Memcpy(MipData + BufferOffset, ChunkData.GetData(),
+					static_cast<int64>(ChunkData.Num()) * sizeof(FColor));
+			}
+			else
+			{
+				bReadSuccess = false;
+				break;
 			}
 		}
 	}

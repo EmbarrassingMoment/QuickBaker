@@ -5,12 +5,10 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "QuickBakerSettings.h"
-#include "QuickBakerAsync.h"
 #include "Engine/Texture.h" // For TextureCompressionSettings
 
 class FAssetThumbnailPool;
 class FAssetThumbnail;
-class SProgressBar;
 
 /**
  * Main Slate Widget for the QuickBaker tool.
@@ -69,12 +67,6 @@ private:
 
 	// Reference to the Compression Row for dynamic visibility control
 	TSharedPtr<SHorizontalBox> CompressionRow;
-
-	// Async bake state
-	TSharedPtr<FQuickBakerAsyncTask> ActiveBakeTask;
-	TSharedPtr<SProgressBar> BakeProgressBar;
-	TSharedPtr<STextBlock> BakeStatusText;
-	TSharedPtr<SVerticalBox> ProgressSection;
 
 	/**
 	 * Initializes the dropdown options for Resolution, Output Type, Bit Depth, etc.
@@ -217,10 +209,4 @@ private:
 	 * @return Whether the event was handled.
 	 */
 	FReply OnBrowseClicked();
-
-	/** Called when the async bake task completes. */
-	void OnBakeComplete(bool bSuccess, const FText& ResultMessage);
-
-	/** @return True if a bake operation is currently running. */
-	bool IsBaking() const { return ActiveBakeTask.IsValid() && ActiveBakeTask->IsRunning(); }
 };
