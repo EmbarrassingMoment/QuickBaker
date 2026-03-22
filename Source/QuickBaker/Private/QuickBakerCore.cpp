@@ -17,6 +17,8 @@
 #include "RenderingThread.h"
 #include "UObject/SavePackage.h"
 #include "TextureResource.h"
+#include "RHI.h"
+#include "Async/ParallelFor.h"
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
 
@@ -88,6 +90,21 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			return;
 		}
 
+		// Validate resolution does not exceed GPU hardware limit
+		{
+			// GMaxTextureDimensions is provided by RHI.h; fallback to 16384 if unavailable or zero
+			const int32 MaxDimension = (GMaxTextureDimensions > 0) ? GMaxTextureDimensions : 16384;
+			if (Settings.Resolution > MaxDimension)
+			{
+				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Resolution %d exceeds maximum supported texture dimension %d."), Settings.Resolution, MaxDimension);
+				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
+					LOCTEXT("Error_ResolutionExceedsMax", "Resolution {0} exceeds the maximum supported texture dimension ({1})."),
+					FText::AsNumber(Settings.Resolution),
+					FText::AsNumber(MaxDimension)));
+				return;
+			}
+		}
+
 		RenderTarget->InitAutoFormat(Settings.Resolution, Settings.Resolution);
 		RenderTarget->RenderTargetFormat = Format;
 		RenderTarget->bForceLinearGamma = true;
@@ -118,7 +135,8 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
 		UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Settings.SelectedMaterial.Get());
 
-		// Ensure all rendering commands are completed before reading pixels
+		// Ensure all rendering commands are completed before reading pixels.
+		// Note: Caller is responsible for flushing before passing RT to BakeToAsset / ExportToFile
 		FlushRenderingCommands();
 
 		// Phase 3: Save
@@ -273,9 +291,18 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		{
 			if (SurfaceData.Num() > 0)
 			{
-				TextureDataSize = (int64)SurfaceData.Num() * sizeof(FFloat16Color);
-				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
-				bReadSuccess = true;
+				if (SurfaceData.Num() != NumPixels)
+				{
+					UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Pixel count mismatch. Expected %lld, got %d"), NumPixels, SurfaceData.Num());
+				}
+				else
+				{
+					// FMemory::Memcpy is retained for 16-bit path: contiguous bulk copy is faster than
+					// ParallelFor for FFloat16Color since no per-pixel transformation is needed.
+					TextureDataSize = (int64)SurfaceData.Num() * sizeof(FFloat16Color);
+					FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
+					bReadSuccess = true;
+				}
 			}
 		}
 	}
@@ -289,9 +316,22 @@ bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQ
 		{
 			if (SurfaceData.Num() > 0)
 			{
-				TextureDataSize = (int64)SurfaceData.Num() * sizeof(FColor);
-				FMemory::Memcpy(MipData, SurfaceData.GetData(), TextureDataSize);
-				bReadSuccess = true;
+				if (SurfaceData.Num() != NumPixels)
+				{
+					UE_LOG(LogQuickBaker, Error, TEXT("BakeToAsset failed: Pixel count mismatch. Expected %lld, got %d"), NumPixels, SurfaceData.Num());
+				}
+				else
+				{
+					// ParallelFor pixel copy to allow future per-pixel operations (swizzle, etc.)
+					const FColor* SrcData = SurfaceData.GetData();
+					FColor* DstData = reinterpret_cast<FColor*>(MipData);
+					ParallelFor(NumPixels, [SrcData, DstData](int64 Index)
+					{
+						DstData[Index] = SrcData[Index];
+					});
+					TextureDataSize = NumPixels * sizeof(FColor);
+					bReadSuccess = true;
+				}
 			}
 		}
 	}
