@@ -50,6 +50,8 @@ public class QuickBaker : ModuleRules
 				"DesktopPlatform",
 				"ImageWrapper",
 				"RenderCore",
+				"RHI",
+				"RHICore",
 				"Settings",
 				// ... add private dependencies that you statically link with here ...	
 			}

@@ -21,8 +21,7 @@ bool FQuickBakerExporter::ExportToFile(UTextureRenderTarget2D* RenderTarget, con
 		return false;
 	}
 
-	// Ensure all rendering commands are completed before reading pixels
-	FlushRenderingCommands();
+	// Note: Caller (ExecuteBake) is responsible for calling FlushRenderingCommands() before invoking ExportToFile.
 
 	FTextureRenderTargetResource* RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	if (!RTResource)

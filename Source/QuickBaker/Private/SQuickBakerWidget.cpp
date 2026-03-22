@@ -22,6 +22,8 @@
 
 #define LOCTEXT_NAMESPACE "SQuickBakerWidget"
 
+static constexpr int32 LargeTextureWarningThreshold = 8192;
+
 void SQuickBakerWidget::Construct(const FArguments& InArgs)
 {
 	bShowMaterialWarning = false;
@@ -676,6 +678,21 @@ FReply SQuickBakerWidget::OnBakeClicked()
 		if (!IFileManager::Get().DirectoryExists(*Settings.OutputPath))
 		{
 			FMessageDialog::Open(EAppMsgType::Ok, FText::Format(LOCTEXT("Error_InvalidDir", "Output directory does not exist: {0}"), FText::FromString(Settings.OutputPath)));
+			return FReply::Handled();
+		}
+	}
+
+	// Warn user about large texture resolution and estimated memory usage
+	if (Settings.Resolution > LargeTextureWarningThreshold)
+	{
+		const int64 EstimatedMB = (int64)Settings.Resolution * Settings.Resolution * 8 / (1024 * 1024);
+		FText WarningMessage = FText::Format(
+			LOCTEXT("Warning_LargeResolution",
+				"This resolution ({0}x{0}) will consume a very large amount of memory (~{1} MB for RGBA16f). Processing may become unstable. Continue?"),
+			FText::AsNumber(Settings.Resolution),
+			FText::AsNumber(EstimatedMB));
+		if (FMessageDialog::Open(EAppMsgType::YesNo, WarningMessage) != EAppReturnType::Yes)
+		{
 			return FReply::Handled();
 		}
 	}
