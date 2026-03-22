@@ -106,6 +106,24 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			}
 		}
 
+		// Validate that total pixel data size fits within TArray's int32 element limit.
+		// ReadPixels / ReadFloat16Pixels return TArray which uses int32 for sizing.
+		// e.g. 16384x16384 * 8 bytes (RGBA16f) = 2^31, overflowing int32.
+		{
+			const int64 NumPixels = (int64)Settings.Resolution * Settings.Resolution;
+			const int64 BytesPerPixel = (Format == RTF_RGBA16f) ? 8 : 4;
+			const int64 TotalBytes = NumPixels * BytesPerPixel;
+			if (TotalBytes > (int64)MAX_int32)
+			{
+				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Pixel data size (%lld bytes) exceeds TArray int32 limit for resolution %d."), TotalBytes, Settings.Resolution);
+				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
+					LOCTEXT("Error_PixelDataTooLarge", "Resolution {0} with the current bit depth produces pixel data ({1} MB) that exceeds engine array limits. Please reduce the resolution or use 8-bit depth."),
+					FText::AsNumber(Settings.Resolution),
+					FText::AsNumber(TotalBytes / (1024 * 1024))));
+				return;
+			}
+		}
+
 		RenderTarget->InitAutoFormat(Settings.Resolution, Settings.Resolution);
 		RenderTarget->RenderTargetFormat = Format;
 		RenderTarget->bForceLinearGamma = true;
