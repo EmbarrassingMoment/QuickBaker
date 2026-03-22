@@ -92,8 +92,9 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 		// Validate resolution does not exceed GPU hardware limit
 		{
-			// GMaxTextureDimensions is provided by RHI.h; fallback to 16384 if unavailable or zero
-			const int32 MaxDimension = (GMaxTextureDimensions > 0) ? GMaxTextureDimensions : 16384;
+			// GMaxTextureDimensions is a TRHIGlobal<int32> provided by RHI.h; explicit cast required
+			const int32 RHIMax = static_cast<int32>(GMaxTextureDimensions);
+			const int32 MaxDimension = (RHIMax > 0) ? RHIMax : 16384; // Fallback to 16384 if RHI value unavailable
 			if (Settings.Resolution > MaxDimension)
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Resolution %d exceeds maximum supported texture dimension %d."), Settings.Resolution, MaxDimension);
