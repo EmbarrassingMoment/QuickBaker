@@ -17,7 +17,6 @@
 #include "RenderingThread.h"
 #include "UObject/SavePackage.h"
 #include "TextureResource.h"
-#include "RHI.h"
 #include "Async/ParallelFor.h"
 
 #define LOCTEXT_NAMESPACE "FQuickBakerCore"
@@ -92,9 +91,9 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 		// Validate resolution does not exceed GPU hardware limit
 		{
-			// GMaxTextureDimensions is a TRHIGlobal<int32> provided by RHI.h; explicit cast required
-			const int32 RHIMax = static_cast<int32>(GMaxTextureDimensions);
-			const int32 MaxDimension = (RHIMax > 0) ? RHIMax : 16384; // Fallback to 16384 if RHI value unavailable
+			// Hardcoded to 16384: GMaxTextureDimensions (RHI.h) requires linking RHICore which is
+			// unavailable to editor plugins. 16384 is the maximum texture dimension for D3D11/D3D12/Vulkan.
+			constexpr int32 MaxDimension = 16384;
 			if (Settings.Resolution > MaxDimension)
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Resolution %d exceeds maximum supported texture dimension %d."), Settings.Resolution, MaxDimension);
