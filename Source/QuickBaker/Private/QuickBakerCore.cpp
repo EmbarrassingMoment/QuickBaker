@@ -92,7 +92,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 		// Validate resolution does not exceed GPU hardware limit
 		{
-			// GMaxTextureDimensions is a TRHIGlobal<int32> from RHI.h (linked via RHICore module)
+			// GMaxTextureDimensions is a TRHIGlobal<int32> from RHI.h (linked via RHI module)
 			const int32 RHIMax = static_cast<int32>(GMaxTextureDimensions);
 			const int32 MaxDimension = (RHIMax > 0) ? RHIMax : 16384; // Fallback if RHI not yet initialized
 			if (Settings.Resolution > MaxDimension)
