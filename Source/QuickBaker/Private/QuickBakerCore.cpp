@@ -24,10 +24,12 @@
 
 void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 {
-	bool bSuccess = false;
 	FText ResultMessage;
 
-	// Scoped block: progress bar is destroyed when this block exits, before any dialog is shown
+	// Wrapped in an IIFE so that early `return`s tear down FScopedSlowTask
+	// before the result dialog is shown (otherwise the progress bar overlaps
+	// the error dialog). A cancel leaves ResultMessage empty → no dialog.
+	[&]()
 	{
 		FScopedSlowTask Task(4.0f, LOCTEXT("BakingTexture", "Baking Texture..."));
 		Task.MakeDialog(true);
@@ -36,6 +38,17 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		Task.EnterProgressFrame(1.0f, LOCTEXT("SetupRT", "Setting up Render Target..."));
 		if (Task.ShouldCancel())
 		{
+			return;
+		}
+
+		// Pin the weak material pointer locally. The UI validated it before
+		// calling us, but GC can run while the progress dialog ticks the engine,
+		// which would invalidate the weak ptr and silently bake a black texture.
+		UMaterialInterface* Material = Settings.SelectedMaterial.Get();
+		if (!Material)
+		{
+			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Selected material is no longer valid (garbage collected)."));
+			ResultMessage = LOCTEXT("Error_MaterialGC", "The selected material is no longer valid (it may have been garbage collected or deleted).");
 			return;
 		}
 
@@ -86,7 +99,6 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		{
 			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Failed to create render target."));
 			ResultMessage = LOCTEXT("Error_RTCreate", "Failed to create render target.");
-			FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 			return;
 		}
 
@@ -98,10 +110,10 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			if (Settings.Resolution > MaxDimension)
 			{
 				UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: Resolution %d exceeds maximum supported texture dimension %d."), Settings.Resolution, MaxDimension);
-				FMessageDialog::Open(EAppMsgType::Ok, FText::Format(
+				ResultMessage = FText::Format(
 					LOCTEXT("Error_ResolutionExceedsMax", "Resolution {0} exceeds the maximum supported texture dimension ({1})."),
 					FText::AsNumber(Settings.Resolution),
-					FText::AsNumber(MaxDimension)));
+					FText::AsNumber(MaxDimension));
 				return;
 			}
 		}
@@ -129,12 +141,11 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 		{
 			UE_LOG(LogQuickBaker, Error, TEXT("ExecuteBake failed: No valid editor world found."));
 			ResultMessage = LOCTEXT("Error_NoWorld", "No valid editor world found.");
-			FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
 			return;
 		}
 
 		UKismetRenderingLibrary::ClearRenderTarget2D(World, RenderTarget, FLinearColor::Black);
-		UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Settings.SelectedMaterial.Get());
+		UKismetRenderingLibrary::DrawMaterialToRenderTarget(World, RenderTarget, Material);
 
 		// Ensure all rendering commands are completed before reading pixels.
 		// Note: Caller is responsible for flushing before passing RT to BakeToAsset / ExportToFile
@@ -149,7 +160,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 
 		if (bIsAsset)
 		{
-			bSuccess = BakeToAsset(RenderTarget, Settings, ResultMessage);
+			BakeToAsset(RenderTarget, Settings, ResultMessage);
 		}
 		else
 		{
@@ -157,7 +168,7 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 			FString Extension = bIsPNG ? TEXT(".png") : TEXT(".exr");
 			FString FullPath = FPaths::Combine(Settings.OutputPath, Settings.OutputName + Extension);
 
-			bSuccess = FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG);
+			const bool bSuccess = FQuickBakerExporter::ExportToFile(RenderTarget, FullPath, bIsPNG);
 			if (bSuccess)
 			{
 				UE_LOG(LogQuickBaker, Log, TEXT("ExecuteBake success: Saved to %s"), *FullPath);
@@ -169,10 +180,14 @@ void FQuickBakerCore::ExecuteBake(const FQuickBakerSettings& Settings)
 				ResultMessage = LOCTEXT("Error_SaveFile", "Failed to save file to disk or convert image.");
 			}
 		}
-	} // FScopedSlowTask is destroyed here — progress bar reaches 100% and closes
+	}(); // FScopedSlowTask is destroyed here — progress bar reaches 100% and closes
 
-	// Show result dialog after the progress bar has fully completed
-	FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
+	// Show result dialog after the progress bar has fully completed.
+	// Empty ResultMessage means the user cancelled — no dialog in that case.
+	if (!ResultMessage.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, ResultMessage);
+	}
 }
 
 bool FQuickBakerCore::BakeToAsset(UTextureRenderTarget2D* RenderTarget, const FQuickBakerSettings& Settings, FText& OutResultMessage)
