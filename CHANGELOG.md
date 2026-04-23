@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-04-23
+### Fixed
+- `ExecuteBake` now pins `SelectedMaterial` locally and fails with an explicit error dialog when the weak pointer is invalidated by garbage collection during the progress dialog, instead of silently baking a black render target.
+- Wrapped the bake pipeline in an IIFE so error-path early returns tear down `FScopedSlowTask` before the result dialog is shown, preventing the progress bar from overlapping the error dialog.
+- `OnBrowseClicked` now validates the inner native window pointer before dereferencing `GetNativeWindow()->GetOSWindowHandle()`, removing a potential null-pointer crash when the parent window has not been fully initialized.
+
 ## [1.1.0] - 2026-03-22
 ### Added
 - PNG transparency and alpha channel support for exported images.
