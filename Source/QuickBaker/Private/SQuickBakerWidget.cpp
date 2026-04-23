@@ -732,7 +732,13 @@ FReply SQuickBakerWidget::OnBrowseClicked()
 		{
 			FString FolderName;
 			TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().FindBestParentWindowForDialogs(nullptr);
-			const void* ParentWindowWindowHandle = (ParentWindow.IsValid()) ? ParentWindow->GetNativeWindow()->GetOSWindowHandle() : nullptr;
+			// GetNativeWindow() can return a null TSharedPtr if the Slate window has not been
+			// fully initialized yet, so both levels must be validated before dereferencing.
+			const void* ParentWindowWindowHandle = nullptr;
+			if (ParentWindow.IsValid() && ParentWindow->GetNativeWindow().IsValid())
+			{
+				ParentWindowWindowHandle = ParentWindow->GetNativeWindow()->GetOSWindowHandle();
+			}
 
 			if (DesktopPlatform->OpenDirectoryDialog(
 				ParentWindowWindowHandle,
